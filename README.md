@@ -27,16 +27,15 @@ cp .env.example .env                 # впишіть APP_USERNAME / APP_PASSWOR
 ```
 
 > Облікові дані читаються тільки зі змінних оточення або `.env` (він у `.gitignore`).
-> Без них UI- і API-тести пропускаються (`SKIPPED`), unit-тести працюють завжди.
+> Без них UI- і API-тести пропускаються (`SKIPPED`).
 
 ## Запуск
 
 ```bash
-pytest                                   # усе: unit + api + ui
+pytest                                   # усе: api + ui
 pytest -m smoke                          # критичний шлях (~13 тестів)
 pytest -m api                            # лише HTTP-перевірки, без браузера
 pytest -m ui                             # лише UI
-pytest -m unit -o addopts=""             # офлайн-перевірки фреймворку (без Playwright-плагіна)
 
 pytest -m ui --headed --slowmo 300       # подивитися, що робить браузер
 pytest -m ui --browser firefox --browser webkit
@@ -84,11 +83,10 @@ pytest --html=test-results/report.html --self-contained-html   # HTML-звіт
 │   ├── conftest.py               # Basic Auth для контекстів, локаль uk-UA, TZ Europe/Kyiv
 │   ├── known_bugs.py             # реєстр дефектів → strict xfail
 │   ├── ui/                       # e2e: поля, додавання, список, експорт, імпорт, карта, старт
-│   ├── api/                      # auth, статика, контракт demo-GeoJSON, тайли, security headers
-│   └── unit/                     # перевірки оракула та білдерів (офлайн)
+│   └── api/                      # auth, статика, контракт demo-GeoJSON, тайли, security headers
 ├── test_data/                    # файли, використані під час ручного тестування та в автотестах
 ├── docs/                         # чек-лист, тест-кейси, баг-репорти, тестові дані, підхід
-└── .github/workflows/tests.yml   # CI: lint + unit → api + ui, артефакти звітів
+└── .github/workflows/tests.yml   # CI: lint → api + ui, артефакти звітів
 ```
 
 ## Практики, закладені у фреймворк
@@ -107,7 +105,7 @@ pytest --html=test-results/report.html --self-contained-html   # HTML-звіт
   перезавантаження не перезаписує дані (перевірка збереження чесна). Кожен тест має власний
   browser context → тести незалежні й паралеляться.
 * **Незалежний тестовий оракул**: MGRS, належність точки полю й площа рахуються власним кодом
-  (`framework/utils/geo.py`, покрито unit-тестами на еталонних значеннях), а не беруться
+  (`framework/utils/geo.py`, звірено з еталонними значеннями застосунку), а не беруться
   із застосунку.
 * **Web-first assertions** (`expect(...)`) без `sleep`; очікування завершення анімацій Leaflet
   інкапсульовано в `MapView.wait_until_idle()`.
@@ -116,7 +114,7 @@ pytest --html=test-results/report.html --self-contained-html   # HTML-звіт
 
 ## Обмеження
 
-* Автотести написані й перевірені статично (імпорт, збирання 140 тестів, unit-тести — зелені).
+* Автотести написані й перевірені статично (імпорт модулів, збирання тестів).
   Селектори звірено з DOM живого застосунку. Повний прогін UI/API потрібно виконати на машині
   з доступом до сайту; середовище, де готувався репозиторій, не мало мережевого доступу до нього.
 * Мобільна верстка, Firefox/WebKit і відкриття CSV в Excel вручну не перевірялися (див.

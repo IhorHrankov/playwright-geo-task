@@ -40,7 +40,6 @@ markers = [
     "regression: full functional regression",
     "ui: end-to-end browser tests",
     "api: HTTP-level checks without a browser",
-    "unit: fast checks of framework helpers (no network)",
 ]
 
 [tool.ruff]
