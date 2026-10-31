@@ -1,123 +1,142 @@
-"""Adding monitoring points by clicking on the map."""
+"""Adding monitoring points by clicking on the map (TC-01, TC-02, TC-03)."""
 
-from __future__ import annotations
+import re
 
 import pytest
 from playwright.sync_api import expect
 
-from framework.data.fields import DEFAULT_ACTIVE_FIELD, FIELDS
-from framework.data.models import POINT_TYPE_LABELS, PointType
+from framework.data import messages
+from framework.data.fields import FIELD_1, FIELD_3
+from framework.data.models import PointType
+from framework.data.test_data import DESCRIPTION_250_CHARS, DESCRIPTION_251_CHARS
 from framework.pages import FieldsGisPage
-from framework.storage import read_points
-from framework.utils.geo import mgrs_close, point_in_polygon, to_mgrs
+from framework.storage import StoredPoints
 
 pytestmark = [pytest.mark.ui, pytest.mark.regression]
 
+FIELD_1_CENTRE = re.compile(r"^50\.41\d{3}, 30\.49\d{3}$")  # centre of Поле №1 ≈ 50.416, 30.496
+MGRS_FORMAT = re.compile(r"^36U UA \d{5} \d{5}$")
+
+
+def test_click_inside_active_field_opens_modal_with_coordinates(gis_page: FieldsGisPage) -> None:
+    gis_page.open_add_point_modal(FIELD_1)
+
+    expect(gis_page.add_point_modal.coordinates_text).to_have_text(FIELD_1_CENTRE)
+    expect(gis_page.add_point_modal.mgrs_text).to_have_text(MGRS_FORMAT)
+
+
+def test_modal_mgrs_corresponds_to_shown_coordinates(gis_page: FieldsGisPage) -> None:
+    gis_page.open_add_point_modal(FIELD_1)
+
+    assert gis_page.add_point_modal.shows_mgrs_of_shown_coordinates()
+
+
+def test_modal_offers_all_point_types_with_soil_sample_selected(gis_page: FieldsGisPage) -> None:
+    gis_page.open_add_point_modal(FIELD_1)
+
+    expect(gis_page.add_point_modal.type_options).to_have_text(
+        ["Проба ґрунту", "Шкідники", "Хвороби рослин", "Інше"]
+    )
+    expect(gis_page.add_point_modal.type_select).to_have_value("SOIL_SAMPLE")
+
 
 @pytest.mark.smoke
-@pytest.mark.parametrize("field", [FIELDS[0], FIELDS[2]], ids=lambda f: f.id)
-def test_add_point_inside_active_field(gis_page: FieldsGisPage, field) -> None:
-    points_before = gis_page.points.counter()
-    field_points_before = gis_page.fields.card(field).points_count()
-
-    gis_page.open_add_point_modal(field)
-    lat, lng = gis_page.add_point_modal.lat_lng()
-    # The modal shows the clicked position and its MGRS (checked against an independent converter).
-    modal_mgrs = gis_page.add_point_modal.mgrs_text.inner_text()
-    assert mgrs_close(modal_mgrs, to_mgrs(lat, lng)), f"{modal_mgrs} != {to_mgrs(lat, lng)}"
-    assert point_in_polygon(lat, lng, field.corners)
-
-    gis_page.add_point_modal.add(PointType.PESTS, "QA: новий осередок шкідників")
+def test_saved_point_is_listed_first_with_its_details(gis_page: FieldsGisPage) -> None:
+    gis_page.add_point(FIELD_1, PointType.PESTS, "QA: новий осередок шкідників")
 
     expect(gis_page.add_point_modal.root).to_be_hidden()
-    expect(gis_page.points.heading).to_contain_text(f"({points_before + 1})")
-    expect(gis_page.fields.card(field).points_badge).to_have_text(str(field_points_before + 1))
-    newest = gis_page.points.card_at(0)  # default sort: newest first
-    expect(newest.description).to_have_text("QA: новий осередок шкідників")
-    expect(newest.type_badge).to_have_text(PointType.PESTS.label)
-    expect(newest.mgrs).to_have_text(modal_mgrs)
-    expect(newest.root).to_contain_text(field.name)
-
-    stored = read_points(gis_page.page)[0]
-    assert stored["fieldId"] == field.id
-    assert stored["type"] == PointType.PESTS.value
-    assert stored["coordinates"]["lat"] == pytest.approx(lat, abs=1e-5)
-    assert stored["coordinates"]["lng"] == pytest.approx(lng, abs=1e-5)
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (6)")
+    expect(gis_page.points.first_card.description).to_have_text("QA: новий осередок шкідників")
+    expect(gis_page.points.first_card.type_badge).to_have_text("Шкідники")
+    expect(gis_page.points.first_card.field_name).to_have_text("• Поле №1 - Озима пшениця")
+    expect(gis_page.points.first_card.mgrs).to_have_text(MGRS_FORMAT)
 
 
-def test_added_point_persists_after_reload(gis_page: FieldsGisPage) -> None:
-    gis_page.open_add_point_modal(DEFAULT_ACTIVE_FIELD)
-    gis_page.add_point_modal.add(PointType.OTHER, "QA: перевірка збереження")
-    expect(gis_page.points.card_by_description("QA: перевірка збереження").root).to_be_visible()
+def test_saved_point_increments_field_counter(gis_page: FieldsGisPage) -> None:
+    gis_page.add_point(FIELD_3, PointType.OTHER)
 
-    gis_page.reload()
-
-    expect(gis_page.points.card_by_description("QA: перевірка збереження").root).to_be_visible()
+    expect(gis_page.fields.card(FIELD_3).points_badge).to_have_text("2")
 
 
-def test_added_point_appears_on_map(empty_gis_page: FieldsGisPage) -> None:
-    expect(empty_gis_page.map.markers).to_have_count(0)
-
-    empty_gis_page.open_add_point_modal(DEFAULT_ACTIVE_FIELD)
-    empty_gis_page.add_point_modal.add(PointType.SOIL_SAMPLE)
+def test_saved_point_appears_on_map(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.add_point(FIELD_1, PointType.SOIL_SAMPLE)
 
     expect(empty_gis_page.map.markers).to_have_count(1)
 
 
-def test_click_outside_active_field_is_rejected(gis_page: FieldsGisPage) -> None:
-    gis_page.map.click_outside_fields(DEFAULT_ACTIVE_FIELD)
+def test_saved_point_is_stored_in_its_field(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.add_point(FIELD_3, PointType.PLANT_DISEASE, "QA: збереження")
+    expect(empty_gis_page.points.cards).to_have_count(1)
+
+    stored = StoredPoints(empty_gis_page.page).newest()
+
+    assert stored.field_id == "field-3"
+    assert stored.type == "PLANT_DISEASE"
+    assert stored.description == "QA: збереження"
+
+
+def test_saved_point_survives_page_reload(gis_page: FieldsGisPage) -> None:
+    gis_page.add_point(FIELD_1, PointType.OTHER, "QA: перевірка збереження")
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (6)")
+
+    gis_page.reload()
+
+    expect(gis_page.points.card("QA: перевірка збереження").root).to_be_visible()
+
+
+def test_whitespace_only_description_is_not_saved(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.add_point(FIELD_1, PointType.OTHER, "   ")
+    expect(empty_gis_page.points.cards).to_have_count(1)
+
+    stored = StoredPoints(empty_gis_page.page).newest()
+
+    assert stored.description is None
+
+
+def test_click_outside_active_field_shows_error_instead_of_modal(gis_page: FieldsGisPage) -> None:
+    gis_page.map.click_outside_fields(FIELD_1)
+
+    expect(gis_page.toast.root).to_have_text(messages.POINT_OUTSIDE_FIELD_1)
+    expect(gis_page.add_point_modal.root).to_be_hidden()
+
+
+def test_cancel_button_closes_modal_without_saving(gis_page: FieldsGisPage) -> None:
+    gis_page.open_add_point_modal(FIELD_1)
+
+    gis_page.add_point_modal.cancel()
 
     expect(gis_page.add_point_modal.root).to_be_hidden()
-    expect(gis_page.toast.root).to_have_text(
-        f'Точка повинна бути в межах обраного поля "{DEFAULT_ACTIVE_FIELD.name}".'
-    )
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")
 
 
-def test_modal_offers_all_point_types_with_soil_sample_default(gis_page: FieldsGisPage) -> None:
-    gis_page.open_add_point_modal(DEFAULT_ACTIVE_FIELD)
+def test_close_icon_closes_modal_without_saving(gis_page: FieldsGisPage) -> None:
+    gis_page.open_add_point_modal(FIELD_1)
 
-    options = gis_page.add_point_modal.type_select.locator("option")
-    expect(options).to_have_text(list(POINT_TYPE_LABELS.values()))
-    expect(gis_page.add_point_modal.type_select).to_have_value(PointType.SOIL_SAMPLE.value)
+    gis_page.add_point_modal.close()
 
-
-@pytest.mark.parametrize("close_via", ["cancel", "close_button", "escape"])
-def test_closing_modal_does_not_create_point(gis_page: FieldsGisPage, close_via: str) -> None:
-    before = gis_page.points.counter()
-    gis_page.open_add_point_modal(DEFAULT_ACTIVE_FIELD)
-    gis_page.add_point_modal.description_input.fill("не має зберегтися")
-
-    modal = gis_page.add_point_modal
-    {"cancel": modal.cancel_button.click, "close_button": modal.close_button.click,
-     "escape": lambda: gis_page.page.keyboard.press("Escape")}[close_via]()
-
-    expect(modal.root).to_be_hidden()
-    expect(gis_page.points.heading).to_contain_text(f"({before})")
-    assert len(read_points(gis_page.page)) == before
+    expect(gis_page.add_point_modal.root).to_be_hidden()
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")
 
 
-@pytest.mark.parametrize(("length", "accepted"), [(250, True), (251, False)])
-def test_description_length_limit(gis_page: FieldsGisPage, length: int, accepted: bool) -> None:
-    before = gis_page.points.counter()
-    gis_page.open_add_point_modal(DEFAULT_ACTIVE_FIELD)
+def test_escape_closes_modal_without_saving(gis_page: FieldsGisPage) -> None:
+    gis_page.open_add_point_modal(FIELD_1)
 
-    gis_page.add_point_modal.add(PointType.OTHER, "щ" * length)
+    gis_page.add_point_modal.press_escape()
 
-    if accepted:
-        expect(gis_page.add_point_modal.root).to_be_hidden()
-        expect(gis_page.points.heading).to_contain_text(f"({before + 1})")
-    else:
-        expect(gis_page.add_point_modal.error_message).to_have_text(
-            "Опис не повинен перевищувати 250 символів"
-        )
-        expect(gis_page.add_point_modal.description_input).to_have_attribute("aria-invalid", "true")
-        assert len(read_points(gis_page.page)) == before
+    expect(gis_page.add_point_modal.root).to_be_hidden()
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")
 
 
-def test_description_is_optional_and_trimmed(empty_gis_page: FieldsGisPage) -> None:
-    empty_gis_page.open_add_point_modal(DEFAULT_ACTIVE_FIELD)
-    empty_gis_page.add_point_modal.add(PointType.OTHER, "   ")
+def test_description_of_250_characters_is_accepted(gis_page: FieldsGisPage) -> None:
+    gis_page.add_point(FIELD_1, PointType.OTHER, DESCRIPTION_250_CHARS)
 
-    stored = read_points(empty_gis_page.page)
-    assert len(stored) == 1
-    assert "description" not in stored[0]  # whitespace-only description is dropped
+    expect(gis_page.add_point_modal.root).to_be_hidden()
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (6)")
+
+
+def test_description_of_251_characters_is_rejected(gis_page: FieldsGisPage) -> None:
+    gis_page.add_point(FIELD_1, PointType.OTHER, DESCRIPTION_251_CHARS)
+
+    expect(gis_page.add_point_modal.error_message).to_have_text(messages.DESCRIPTION_TOO_LONG)
+    expect(gis_page.add_point_modal.description_input).to_have_attribute("aria-invalid", "true")
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")

@@ -33,13 +33,26 @@ class AppClient:
         assert match, "main JS bundle is not referenced from index.html"
         return match.group(1)
 
+    def main_bundle(self) -> APIResponse:
+        return self.request.get(self.bundle_path())
+
     def get(self, path: str) -> APIResponse:
         return self.request.get(path)
 
 
 class TileClient:
+    # (z, x, y): two neighbouring tiles over the fields at zoom 14 and one wider tile at zoom 10
+    KYIV_TILES = ((14, 9580, 5526), (14, 9580, 5527), (10, 598, 345))
+
     def __init__(self, request: APIRequestContext) -> None:
         self.request = request
+
+    def carto_distinct_images(self, tiles: tuple[tuple[int, int, int], ...]) -> int:
+        """How many different images CARTO returns for the given tiles."""
+        return len({self.carto(z, x, y).body() for z, x, y in tiles})
+
+    def esri_distinct_images(self, tiles: tuple[tuple[int, int, int], ...]) -> int:
+        return len({self.esri(z, x, y).body() for z, x, y in tiles})
 
     def carto(self, z: int, x: int, y: int, subdomain: str = "a") -> APIResponse:
         return self.request.get(CARTO_TILE.format(s=subdomain, z=z, x=x, y=y))

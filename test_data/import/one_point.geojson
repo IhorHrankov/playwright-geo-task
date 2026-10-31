@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.48955,
+          50.41295
+        ]
+      },
+      "properties": {
+        "id": "std-1",
+        "fieldId": "field-1",
+        "fieldName": "Поле №1 - Озима пшениця",
+        "type": "SOIL_SAMPLE",
+        "typeLabel": "Проба ґрунту",
+        "mgrs": "36U UA 21639 87558",
+        "description": "Проба ґрунту на глибині 0-30 см",
+        "createdAt": "2026-09-20T08:30:00.000Z"
+      }
+    }
+  ]
+}

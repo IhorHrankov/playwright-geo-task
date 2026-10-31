@@ -17,7 +17,9 @@ def api_base_url(base_url: str | None, settings) -> str:
 
 
 @pytest.fixture(scope="session")
-def authed_request(playwright: Playwright, api_base_url: str, credentials: Credentials) -> Iterator[APIRequestContext]:
+def authed_request(
+    playwright: Playwright, api_base_url: str, credentials: Credentials
+) -> Iterator[APIRequestContext]:
     ctx = playwright.request.new_context(base_url=api_base_url, http_credentials=credentials.as_playwright())
     yield ctx
     ctx.dispose()

@@ -1,4 +1,4 @@
-"""UI fixtures: page objects injected into tests, with localStorage seeded before the first load."""
+"""UI fixtures. Each test gets its own browser context, so localStorage is never shared."""
 
 from __future__ import annotations
 
@@ -7,39 +7,35 @@ from collections.abc import Callable, Sequence
 import pytest
 from playwright.sync_api import BrowserContext, Page
 
-from framework.data import datasets
 from framework.data.models import MonitoringPoint
+from framework.data.test_data import STANDARD_POINTS
 from framework.pages import FieldsGisPage, StartPage
 from framework.storage import seed_points
 
-OpenGis = Callable[..., FieldsGisPage]
+OpenGis = Callable[[Sequence[MonitoringPoint]], FieldsGisPage]
 
 
 @pytest.fixture
-def open_gis(page: Page, context: BrowserContext) -> OpenGis:
-    """Factory: ``open_gis(points)`` seeds the given points and opens #/test."""
+def open_gis_with(page: Page, context: BrowserContext) -> OpenGis:
+    """Opens #/test with exactly the given points in storage: ``open_gis_with([POINT])``."""
 
-    def _open(points: Sequence[MonitoringPoint] | None = None) -> FieldsGisPage:
-        seed_points(context, datasets.standard_points() if points is None else points)
+    def _open(points: Sequence[MonitoringPoint]) -> FieldsGisPage:
+        seed_points(context, points)
         return FieldsGisPage(page).open()
 
     return _open
 
 
 @pytest.fixture
-def standard_points() -> list[MonitoringPoint]:
-    return datasets.standard_points()
+def gis_page(open_gis_with: OpenGis) -> FieldsGisPage:
+    """#/test with the 5 standard points (framework/data/test_data.py)."""
+    return open_gis_with(STANDARD_POINTS)
 
 
 @pytest.fixture
-def gis_page(open_gis: OpenGis, standard_points: list[MonitoringPoint]) -> FieldsGisPage:
-    """Main page with the standard dataset (5 points across 4 fields)."""
-    return open_gis(standard_points)
-
-
-@pytest.fixture
-def empty_gis_page(open_gis: OpenGis) -> FieldsGisPage:
-    return open_gis([])
+def empty_gis_page(open_gis_with: OpenGis) -> FieldsGisPage:
+    """#/test with no points at all."""
+    return open_gis_with([])
 
 
 @pytest.fixture

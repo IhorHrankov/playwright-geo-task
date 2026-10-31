@@ -1,183 +1,207 @@
-"""Points list: search, type filter, sorting, delete, reset, 'show on map'."""
-
-from __future__ import annotations
+"""Points list: order, search, type filter, delete, reset, 'show on map' (TC-04, TC-07, TC-08)."""
 
 import pytest
 from playwright.sync_api import expect
 
-from framework.data import datasets
-from framework.data.fields import FIELDS_BY_ID
-from framework.data.models import MonitoringPoint, PointType
+from framework.data import messages
+from framework.data.fields import FIELD_1, FIELD_2
+from framework.data.models import PointType
+from framework.data.test_data import (
+    DISEASE_FIELD_2,
+    OTHER_FIELD_3,
+    SOIL_SAMPLE_FIELD_1,
+    STANDARD_DESCRIPTIONS_NEWEST_FIRST,
+    STANDARD_DESCRIPTIONS_OLDEST_FIRST,
+)
 from framework.pages import FieldsGisPage
-from framework.storage import read_points
+from framework.storage import StoredPoints
 from tests.known_bugs import known_bug
 
 pytestmark = [pytest.mark.ui, pytest.mark.regression]
 
 
-def _by_newest(points: list[MonitoringPoint]) -> list[MonitoringPoint]:
-    return sorted(points, key=lambda p: p.created_at, reverse=True)
+# ---------------------------------------------------------------- order
 
 
 @pytest.mark.smoke
-def test_list_shows_all_points_newest_first(gis_page: FieldsGisPage, standard_points) -> None:
-    expect(gis_page.points.heading).to_contain_text(f"({len(standard_points)})")
-    expect(gis_page.points.cards).to_have_count(len(standard_points))
-    assert gis_page.points.sort_is_newest_first()
-    assert gis_page.points.descriptions() == [p.description for p in _by_newest(standard_points)]
+def test_list_shows_all_points_newest_first(gis_page: FieldsGisPage) -> None:
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")
+    expect(gis_page.points.sort_button).to_have_text("Нові")
+    expect(gis_page.points.descriptions).to_have_text(STANDARD_DESCRIPTIONS_NEWEST_FIRST)
 
 
-def test_sort_toggle_switches_to_oldest_first_and_back(gis_page: FieldsGisPage, standard_points) -> None:
+def test_sort_toggle_shows_oldest_first(gis_page: FieldsGisPage) -> None:
     gis_page.points.toggle_sort()
-    expect(gis_page.points.sort_button).to_contain_text("Старі")
-    assert gis_page.points.descriptions() == [p.description for p in reversed(_by_newest(standard_points))]
+
+    expect(gis_page.points.sort_button).to_have_text("Старі")
+    expect(gis_page.points.descriptions).to_have_text(STANDARD_DESCRIPTIONS_OLDEST_FIRST)
+
+
+def test_second_sort_toggle_returns_newest_first(gis_page: FieldsGisPage) -> None:
+    gis_page.points.toggle_sort()
 
     gis_page.points.toggle_sort()
-    expect(gis_page.points.sort_button).to_contain_text("Нові")
-    assert gis_page.points.descriptions() == [p.description for p in _by_newest(standard_points)]
+
+    expect(gis_page.points.descriptions).to_have_text(STANDARD_DESCRIPTIONS_NEWEST_FIRST)
+
+
+# ---------------------------------------------------------------- search
 
 
 @pytest.mark.parametrize(
-    ("query", "expected_ids"),
+    ("query", "expected_descriptions"),
     [
-        pytest.param("черепашки", {"std-2"}, id="by-description"),
-        pytest.param("ЧЕРЕПАШКИ", {"std-2"}, id="case-insensitive"),
-        pytest.param("Соняшник", {"std-3"}, id="by-field-name"),
-        pytest.param("шкідники", {"std-2", "std-5"}, id="by-type-label"),
-        pytest.param("  гнилі  ", {"std-3"}, id="trimmed"),
+        ("черепашки", ["Осередок клопа шкідливої черепашки"]),
+        ("ЧЕРЕПАШКИ", ["Осередок клопа шкідливої черепашки"]),
+        ("  гнилі  ", ["Ознаки білої гнилі на прикореневій шийці"]),
+        ("Соняшник", ["Ознаки білої гнилі на прикореневій шийці"]),
+        ("36U UA 22882 89519", ["Контрольна точка метеостанції"]),
+        ("шкідники", ["Пастки на ріпакового квіткоїда", "Осередок клопа шкідливої черепашки"]),
     ],
+    ids=["by-description", "case-insensitive", "trims-spaces", "by-field-name", "by-mgrs", "by-type-label"],
 )
-def test_search(gis_page: FieldsGisPage, standard_points, query: str, expected_ids: set[str]) -> None:
-    expected = [p.description for p in _by_newest(standard_points) if p.id in expected_ids]
-
+def test_search_finds_points(gis_page: FieldsGisPage, query: str, expected_descriptions: list[str]) -> None:
     gis_page.points.search(query)
 
-    expect(gis_page.points.heading).to_contain_text(f"({len(expected)})")
-    assert gis_page.points.descriptions() == expected
+    expect(gis_page.points.descriptions).to_have_text(expected_descriptions)
 
 
-def test_search_by_mgrs(gis_page: FieldsGisPage, standard_points) -> None:
-    target = standard_points[3]
-    gis_page.points.search(target.mgrs)
-
-    expect(gis_page.points.cards).to_have_count(1)
-    expect(gis_page.points.card_at(0).mgrs).to_have_text(target.mgrs)
-
-
-def test_search_without_results_offers_filter_reset(gis_page: FieldsGisPage, standard_points) -> None:
+def test_search_without_matches_shows_empty_state(gis_page: FieldsGisPage) -> None:
     gis_page.points.search("такого опису немає")
 
-    expect(gis_page.points.cards).to_have_count(0)
-    expect(gis_page.points.empty_state).to_be_visible()
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (0)")
+    expect(gis_page.points.empty_state).to_have_text(messages.NO_POINTS_FOUND)
+
+
+def test_reset_filters_button_clears_search(gis_page: FieldsGisPage) -> None:
+    gis_page.points.search("такого опису немає")
 
     gis_page.points.reset_filters_button.click()
 
     expect(gis_page.points.search_input).to_have_value("")
-    expect(gis_page.points.cards).to_have_count(len(standard_points))
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")
 
 
-@pytest.mark.parametrize("point_type", list(PointType), ids=lambda t: t.value)
-def test_filter_by_type(gis_page: FieldsGisPage, standard_points, point_type: PointType) -> None:
-    expected = [p for p in standard_points if p.type == point_type.value]
+# ---------------------------------------------------------------- type filter
 
+
+@pytest.mark.parametrize(
+    ("point_type", "expected_badges"),
+    [
+        (PointType.SOIL_SAMPLE, ["Проба ґрунту"]),
+        (PointType.PESTS, ["Шкідники", "Шкідники"]),
+        (PointType.PLANT_DISEASE, ["Хвороби рослин"]),
+        (PointType.OTHER, ["Інше"]),
+    ],
+    ids=["soil-sample", "pests", "plant-disease", "other"],
+)
+def test_type_filter_keeps_only_that_type(
+    gis_page: FieldsGisPage, point_type: PointType, expected_badges: list[str]
+) -> None:
     gis_page.points.filter_by_type(point_type)
 
-    expect(gis_page.points.type_filter_button(point_type)).to_have_attribute("aria-pressed", "true")
-    expect(gis_page.points.cards).to_have_count(len(expected))
-    for i in range(len(expected)):
-        expect(gis_page.points.card_at(i).type_badge).to_have_text(point_type.label)
+    expect(gis_page.points.type_filter(point_type)).to_have_attribute("aria-pressed", "true")
+    expect(gis_page.points.type_badges).to_have_text(expected_badges)
 
 
-def test_filter_and_search_combine(gis_page: FieldsGisPage) -> None:
+def test_type_filter_and_search_are_combined(gis_page: FieldsGisPage) -> None:
     gis_page.points.filter_by_type(PointType.PESTS)
+
     gis_page.points.search("Ріпак")
 
-    expect(gis_page.points.cards).to_have_count(1)
-    expect(gis_page.points.card_at(0).description).to_have_text("Пастки на ріпакового квіткоїда")
-
-
-def test_delete_point_from_list(gis_page: FieldsGisPage, standard_points) -> None:
-    victim = standard_points[0]
-    field_card = gis_page.fields.card(FIELDS_BY_ID[victim.field_id])
-    field_count = field_card.points_count()
-
-    gis_page.points.card_by_description(victim.description).delete()
-
-    expect(gis_page.toast.root).to_have_text("Точку моніторингу видалено")
-    expect(gis_page.points.card_by_description(victim.description).root).to_have_count(0)
-    expect(gis_page.points.heading).to_contain_text(f"({len(standard_points) - 1})")
-    expect(gis_page.map.markers).to_have_count(len(standard_points) - 1)
-    expect(field_card.points_badge).to_have_text(str(field_count - 1))
-    assert victim.id not in {p["id"] for p in read_points(gis_page.page)}
-
-
-def test_delete_point_from_map_popup(gis_page: FieldsGisPage, standard_points) -> None:
-    gis_page.map.markers.first.click()
-    expect(gis_page.map.popup).to_be_visible()
-
-    gis_page.map.popup.get_by_role("button", name="Видалити моніторингову точку").click()
-
-    expect(gis_page.points.cards).to_have_count(len(standard_points) - 1)
-
-
-@known_bug("BUG-14")
-def test_delete_asks_for_confirmation(gis_page: FieldsGisPage, standard_points) -> None:
-    dialogs: list[str] = []
-    gis_page.page.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
-
-    gis_page.points.card_at(0).delete()
-
-    undo = gis_page.toast.root.get_by_role("button", name="Скасувати")
-    assert dialogs or undo.is_visible(), "point was deleted with neither confirmation nor undo"
-
-
-def test_reset_data_restores_builtin_points(gis_page: FieldsGisPage) -> None:
-    gis_page.points.reset_data(accept=True)
-
-    expect(gis_page.toast.root).to_have_text("Дані успішно скинуто до початкових демо-точок")
-    expect(gis_page.points.cards).to_have_count(3)  # three built-in default points
-    assert {p["id"] for p in read_points(gis_page.page)} == {"point-1", "point-2", "point-3"}
-
-
-def test_reset_data_cancelled_keeps_points(gis_page: FieldsGisPage, standard_points) -> None:
-    gis_page.points.reset_data(accept=False)
-
-    expect(gis_page.points.cards).to_have_count(len(standard_points))
-
-
-def test_show_on_map_activates_field_and_centres_point(gis_page: FieldsGisPage, standard_points) -> None:
-    target = standard_points[2]  # lives in field-2, which is not active initially
-
-    gis_page.points.card_by_description(target.description).show_on_map()
-
-    expect(gis_page.fields.card(FIELDS_BY_ID[target.field_id]).root).to_have_attribute("aria-pressed", "true")
-    assert gis_page.map.has_marker_at_center()
-
-
-@known_bug("BUG-10")
-def test_show_on_map_twice_recentres_after_pan(gis_page: FieldsGisPage, standard_points) -> None:
-    card = gis_page.points.card_by_description(standard_points[2].description)
-    card.show_on_map()
-    assert gis_page.map.has_marker_at_center()
-
-    gis_page.map.drag_by(-400, 250)
-    assert not gis_page.map.has_marker_at_center(timeout_ms=500)
-
-    card.show_on_map()
-    assert gis_page.map.has_marker_at_center()
+    expect(gis_page.points.descriptions).to_have_text(["Пастки на ріпакового квіткоїда"])
 
 
 @known_bug("BUG-11")
-def test_type_filter_is_applied_to_map_markers(gis_page: FieldsGisPage, standard_points) -> None:
+def test_type_filter_is_applied_to_map_markers(gis_page: FieldsGisPage) -> None:
     gis_page.points.filter_by_type(PointType.PLANT_DISEASE)
-    expect(gis_page.points.cards).to_have_count(1)
 
     expect(gis_page.map.markers).to_have_count(1, timeout=2_000)
 
 
-def test_empty_storage_shows_empty_list(open_gis) -> None:
-    gis = open_gis(datasets.empty())
+# ---------------------------------------------------------------- delete
 
-    expect(gis.points.heading).to_contain_text("(0)")
-    expect(gis.points.empty_state).to_be_visible()
-    expect(gis.map.markers).to_have_count(0)
+
+def test_deleting_point_removes_it_from_list(gis_page: FieldsGisPage) -> None:
+    gis_page.points.card(SOIL_SAMPLE_FIELD_1.description).delete()
+
+    expect(gis_page.toast.root).to_have_text(messages.POINT_DELETED)
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (4)")
+    expect(gis_page.points.card(SOIL_SAMPLE_FIELD_1.description).root).to_have_count(0)
+
+
+def test_deleting_point_removes_its_marker_and_updates_field_counter(gis_page: FieldsGisPage) -> None:
+    gis_page.points.card(SOIL_SAMPLE_FIELD_1.description).delete()
+
+    expect(gis_page.map.markers).to_have_count(4)
+    expect(gis_page.fields.card(FIELD_1).points_badge).to_have_text("1")
+
+
+def test_deleting_point_removes_it_from_storage(gis_page: FieldsGisPage) -> None:
+    gis_page.points.card(SOIL_SAMPLE_FIELD_1.description).delete()
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (4)")
+
+    assert StoredPoints(gis_page.page).ids() == ["std-2", "std-3", "std-4", "std-5"]
+
+
+def test_deleting_point_from_map_popup(gis_page: FieldsGisPage) -> None:
+    gis_page.map.markers.first.click()
+
+    gis_page.map.popup.get_by_role("button", name="Видалити моніторингову точку").click()
+
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (4)")
+
+
+@known_bug("BUG-14")
+def test_deleting_point_offers_undo(gis_page: FieldsGisPage) -> None:
+    gis_page.points.first_card.delete()
+
+    expect(gis_page.toast.root.get_by_role("button", name="Скасувати")).to_be_visible(timeout=1_000)
+
+
+# ---------------------------------------------------------------- reset
+
+
+def test_reset_data_restores_three_builtin_points(gis_page: FieldsGisPage) -> None:
+    gis_page.points.reset_data()
+
+    expect(gis_page.toast.root).to_have_text(messages.DATA_RESET)
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (3)")
+
+
+def test_cancelled_reset_keeps_points(gis_page: FieldsGisPage) -> None:
+    gis_page.points.reset_data_but_cancel()
+
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")
+
+
+def test_empty_storage_shows_empty_list_and_map(empty_gis_page: FieldsGisPage) -> None:
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (0)")
+    expect(empty_gis_page.points.empty_state).to_be_visible()
+    expect(empty_gis_page.map.markers).to_have_count(0)
+
+
+# ---------------------------------------------------------------- show on map
+
+
+def test_show_on_map_activates_point_field(gis_page: FieldsGisPage) -> None:
+    gis_page.points.card(DISEASE_FIELD_2.description).show_on_map()
+
+    expect(gis_page.fields.card(FIELD_2).root).to_have_attribute("aria-pressed", "true")
+
+
+def test_show_on_map_centres_map_on_point(gis_page: FieldsGisPage) -> None:
+    gis_page.points.card(DISEASE_FIELD_2.description).show_on_map()
+
+    assert gis_page.map.is_a_marker_centered()
+
+
+@known_bug("BUG-10")
+def test_show_on_map_again_after_panning_recentres_map(gis_page: FieldsGisPage) -> None:
+    point = gis_page.points.card(OTHER_FIELD_3.description)
+    point.show_on_map()
+    gis_page.map.drag_by(-400, 250)
+
+    point.show_on_map()
+
+    assert gis_page.map.is_a_marker_centered()

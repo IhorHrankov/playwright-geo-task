@@ -1,0 +1,105 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.5248,
+          50.4333
+        ]
+      },
+      "properties": {
+        "id": "std-5",
+        "fieldId": "field-4",
+        "fieldName": "Поле №4 - Ріпак озимий",
+        "type": "PESTS",
+        "typeLabel": "Шкідники",
+        "mgrs": "36U UA 24219 89736",
+        "description": "Пастки на ріпакового квіткоїда",
+        "createdAt": "2026-09-24T07:10:00.000Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.5061,
+          50.43095
+        ]
+      },
+      "properties": {
+        "id": "std-4",
+        "fieldId": "field-3",
+        "fieldName": "Поле №3 - Кукурудза на зерно",
+        "type": "OTHER",
+        "typeLabel": "Інше",
+        "mgrs": "36U UA 22882 89519",
+        "description": "Контрольна точка метеостанції",
+        "createdAt": "2026-09-23T16:20:00.000Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.51765,
+          50.42105
+        ]
+      },
+      "properties": {
+        "id": "std-3",
+        "fieldId": "field-2",
+        "fieldName": "Поле №2 - Соняшник класичний",
+        "type": "PLANT_DISEASE",
+        "typeLabel": "Хвороби рослин",
+        "mgrs": "36U UA 23666 88391",
+        "description": "Ознаки білої гнилі на прикореневій шийці",
+        "createdAt": "2026-09-22T14:45:00.000Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.5031,
+          50.41905
+        ]
+      },
+      "properties": {
+        "id": "std-2",
+        "fieldId": "field-1",
+        "fieldName": "Поле №1 - Озима пшениця",
+        "type": "PESTS",
+        "typeLabel": "Шкідники",
+        "mgrs": "36U UA 22625 88203",
+        "description": "Осередок клопа шкідливої черепашки",
+        "createdAt": "2026-09-21T10:15:00.000Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.48955,
+          50.41295
+        ]
+      },
+      "properties": {
+        "id": "std-1",
+        "fieldId": "field-1",
+        "fieldName": "Поле №1 - Озима пшениця",
+        "type": "SOIL_SAMPLE",
+        "typeLabel": "Проба ґрунту",
+        "mgrs": "36U UA 21639 87558",
+        "description": "Проба ґрунту на глибині 0-30 см",
+        "createdAt": "2026-09-20T08:30:00.000Z"
+      }
+    }
+  ]
+}

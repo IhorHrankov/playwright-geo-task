@@ -1,19 +1,19 @@
 # Тест-кейси
 
 **Загальна передумова:** застосунок відкрито за адресою `/#/test`, виконано вхід (HTTP Basic Auth),
-дані точок відомі. В автотестах стан задається через localStorage: набір `standard_points`
-з `framework/data/datasets.py` — 5 точок у 4 полях, усі типи, різні дати.
+дані точок відомі. В автотестах стан задається через localStorage: набір `STANDARD_POINTS`
+з `framework/data/test_data.py` — 5 точок у 4 полях, усі типи, різні дати.
 
 | ID | Назва | Пріоритет | Автотест | Статус |
 | --- | --- | --- | --- | --- |
-| TC-01 | Додавання точки в активному полі | High | `tests/ui/test_add_point.py::test_add_point_inside_active_field` | Pass |
-| TC-02 | Додавання точки поза полем | High | `tests/ui/test_add_point.py::test_click_outside_active_field_is_rejected` | Pass |
-| TC-03 | Валідація довжини опису | Medium | `tests/ui/test_add_point.py::test_description_length_limit` | Pass |
-| TC-04 | Пошук і фільтр разом | Medium | `tests/ui/test_points_list.py::test_filter_and_search_combine`, `test_type_filter_is_applied_to_map_markers` | Fail (BUG-11) |
-| TC-05 | Експорт CSV і зворотний імпорт | High | `tests/ui/test_import.py::test_reimport_of_exported_file_does_not_duplicate` | Fail (BUG-06) |
-| TC-06 | Імпорт з невалідними рядками | High | `tests/ui/test_import.py::test_points_outside_*`, `test_out_of_range_*`, `test_invalid_created_at_*`, `test_imported_mgrs_*` | Fail (BUG-01, 02, 04, 05) |
-| TC-07 | Видалення точки | High | `tests/ui/test_points_list.py::test_delete_point_from_list`, `test_delete_asks_for_confirmation` | Fail (BUG-14; BUG-03) |
-| TC-08 | «Показати на карті» | Medium | `tests/ui/test_points_list.py::test_show_on_map_*` | Fail (BUG-10) |
+| TC-01 | Додавання точки в активному полі | High | `tests/ui/test_add_point.py::test_saved_point_is_listed_first_with_its_details` | Pass |
+| TC-02 | Додавання точки поза полем | High | `tests/ui/test_add_point.py::test_click_outside_active_field_shows_error_instead_of_modal` | Pass |
+| TC-03 | Валідація довжини опису | Medium | `tests/ui/test_add_point.py::test_description_of_251_characters_is_rejected` | Pass |
+| TC-04 | Пошук і фільтр разом | Medium | `tests/ui/test_points_list.py::test_type_filter_and_search_are_combined`, `test_type_filter_is_applied_to_map_markers` | Fail (BUG-11) |
+| TC-05 | Експорт CSV і зворотний імпорт | High | `tests/ui/test_import.py::test_reimporting_exported_file_does_not_duplicate_points` | Fail (BUG-06) |
+| TC-06 | Імпорт з невалідними рядками | High | `tests/ui/test_import.py::test_point_outside_its_field_is_not_imported`, `test_out_of_range_coordinates_are_not_imported`, `test_invalid_creation_date_is_not_imported`, `test_imported_mgrs_is_recalculated_from_coordinates` | Fail (BUG-01, 02, 04, 05) |
+| TC-07 | Видалення точки | High | `tests/ui/test_points_list.py::test_deleting_point_removes_it_from_list`, `test_deleting_point_offers_undo` | Fail (BUG-14; BUG-03) |
+| TC-08 | «Показати на карті» | Medium | `tests/ui/test_points_list.py::test_show_on_map_centres_map_on_point`, `test_show_on_map_again_after_panning_recentres_map` | Fail (BUG-10) |
 
 ---
 

@@ -47,7 +47,11 @@ def to_utm(lat: float, lng: float) -> tuple[int, float, float]:
         m
         + n
         * math.tan(phi)
-        * (a * a / 2 + (5 - t + 9 * c + 4 * c * c) * a**4 / 24 + (61 - 58 * t + t * t + 600 * c - 330 * _EP2) * a**6 / 720)
+        * (
+            a * a / 2
+            + (5 - t + 9 * c + 4 * c * c) * a**4 / 24
+            + (61 - 58 * t + t * t + 600 * c - 330 * _EP2) * a**6 / 720
+        )
     )
     if lat < 0:
         northing += 10_000_000

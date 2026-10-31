@@ -11,6 +11,7 @@
 | [docs/test-cases.md](docs/test-cases.md) | Тест-кейси для ключових сценаріїв + зв'язок з автотестами |
 | [docs/bug-reports.md](docs/bug-reports.md) | 16 баг-репортів (1 Critical, 5 Major, 7 Minor, 3 Trivial) |
 | [docs/test-data.md](docs/test-data.md) | Усі тестові дані, що використовувалися, і де вони лежать |
+| [docs/test-guidelines.md](docs/test-guidelines.md) | Правила написання автотестів (з джерелами) |
 
 ## Швидкий старт
 
@@ -33,7 +34,7 @@ cp .env.example .env                 # впишіть APP_USERNAME / APP_PASSWOR
 
 ```bash
 pytest                                   # усе: api + ui
-pytest -m smoke                          # критичний шлях (~13 тестів)
+pytest -m smoke                          # критичний шлях (12 тестів)
 pytest -m api                            # лише HTTP-перевірки, без браузера
 pytest -m ui                             # лише UI
 
@@ -68,53 +69,49 @@ pytest --html=test-results/report.html --self-contained-html   # HTML-звіт
 .
 ├── framework/                    # спільний код фреймворку, без тестів
 │   ├── config.py                 # Settings з env/.env (BASE_URL, APP_USERNAME, APP_PASSWORD)
-│   ├── storage.py                # seed/read localStorage (стан застосунку)
+│   ├── storage.py                # seed localStorage; PointRecords/StoredPoints — доменні перевірки стану
+│   ├── files.py                  # читання завантажених і еталонних файлів
 │   ├── api/app_client.py         # HTTP-клієнти: хост Amplify, тайли CARTO/Esri
 │   ├── data/
-│   │   ├── fields.py             # еталонні поля (полігони, площі)
-│   │   ├── models.py             # pydantic-моделі точки та GeoJSON-контракту
-│   │   ├── builders.py           # make_point(), генерація CSV/GeoJSON у форматі застосунку
-│   │   └── datasets.py           # іменовані набори даних для seed
-│   ├── utils/geo.py              # незалежний оракул: WGS84→MGRS, point-in-polygon, площа
+│   │   ├── fields.py             # FIELD_1…FIELD_4: полігони, площі
+│   │   ├── test_data.py          # літеральні точки, очікувані списки, шляхи до файлів
+│   │   ├── messages.py           # тексти інтерфейсу (toast, помилки)
+│   │   └── models.py             # pydantic-моделі точки та GeoJSON-контракту
+│   ├── utils/geo.py              # незалежний розрахунок: WGS84→MGRS, point-in-polygon, площа
 │   ├── pages/                    # Page Objects (BasePage → StartPage, FieldsGisPage)
-│   └── components/               # компоненти сторінки: FieldsList, PointsPanel, PointCard,
-│                                 #   DataMenu, AddPointModal, MapView, Toast
+│   └── components/               # FieldsList, PointsPanel, PointCard, DataMenu, AddPointModal, MapView, Toast
 ├── tests/
 │   ├── conftest.py               # Basic Auth для контекстів, локаль uk-UA, TZ Europe/Kyiv
 │   ├── known_bugs.py             # реєстр дефектів → strict xfail
 │   ├── ui/                       # e2e: поля, додавання, список, експорт, імпорт, карта, старт
 │   └── api/                      # auth, статика, контракт demo-GeoJSON, тайли, security headers
-├── test_data/                    # файли, використані під час ручного тестування та в автотестах
-├── docs/                         # чек-лист, тест-кейси, баг-репорти, тестові дані, підхід
-└── .github/workflows/tests.yml   # CI: lint → api + ui, артефакти звітів
+├── test_data/
+│   ├── import/                   # файли для імпорту (валідні, пошкоджені, з невалідними даними)
+│   ├── expected/                 # еталонні результати експорту
+│   └── state/                    # стан localStorage до тестування, геометрія полів
+├── scripts/check_test_style.py   # перевірка «без логіки в тестах» (запускається в CI)
+├── docs/                         # чек-лист, тест-кейси, баг-репорти, тестові дані, правила, підхід
+└── .github/workflows/tests.yml   # CI: lint + style → api + ui, артефакти звітів
 ```
 
 ## Практики, закладені у фреймворк
 
-* **Page Object + компоненти** (за мотивами
-  [гайду anton.qa](https://www.anton.qa/blog/posts/page-object-model-in-playwright-with-typescript-complete-guide#best-practices)):
-  `BasePage` з абстрактними `path` і `ready_marker`; кожен компонент обмежений своїм `root`
-  (`section[aria-labelledby=…]`, `role=dialog`, `role=main`); локатори — властивості
-  (резолвляться ліниво); дії — короткі методи-дієслова (`select_field`, `open_add_point_modal`,
-  `export_csv`); **асерти лише в тестах**.
-* **Локатори з пріоритетом доступності**: `get_by_role` / `get_by_label` з українськими
-  назвами з UI; CSS лише для Leaflet (у нього немає ролей).
-* **Фікстури замість ручного створення об'єктів**: `gis_page`, `empty_gis_page`, `open_gis(points)`,
-  `start_page`, `app`, `tiles`, `anonymous_request`.
-* **Детермінований стан**: localStorage засівається `add_init_script` до першого завантаження;
-  перезавантаження не перезаписує дані (перевірка збереження чесна). Кожен тест має власний
-  browser context → тести незалежні й паралеляться.
-* **Незалежний тестовий оракул**: MGRS, належність точки полю й площа рахуються власним кодом
-  (`framework/utils/geo.py`, звірено з еталонними значеннями застосунку), а не беруться
-  із застосунку.
-* **Web-first assertions** (`expect(...)`) без `sleep`; очікування завершення анімацій Leaflet
-  інкапсульовано в `MapView.wait_until_idle()`.
-* **Секрети поза кодом**, `xfail_strict`, `--strict-markers`, trace/скріншот/відео на падіння,
-  ретраї лише в CI (`--reruns 1`), ruff-лінт.
+Детально, з прикладами і джерелами, — у [docs/test-guidelines.md](docs/test-guidelines.md). Коротко:
+
+* **Тест — тільки сценарій і перевірки.** Без циклів, `if`, comprehension, арифметики, f-рядків
+  (гарантує `python scripts/check_test_style.py`); варіанти — через `parametrize` з `ids`.
+* **Очікування записані наперед**: літеральні дані в `framework/data/test_data.py`, еталонні
+  файли в `test_data/expected/`, тексти UI в `messages.py`.
+* **DAMP > DRY**, Arrange / Act / Assert, одна поведінка на тест, назва = очікувана поведінка.
+* **Page Object + компоненти**: локатори-властивості, дії-дієслова, доменні запити;
+  `assert` / `expect` — тільки в тестах.
+* **Web-first assertions** і локатори за роллю/підписом; очікування анімацій Leaflet — у `MapView`.
+* **Ізоляція**: свій browser context і засіяний localStorage на кожен тест → паралельний запуск.
+* **Відомі дефекти** — strict `xfail` з ID бага; секрети — лише в `.env` / секретах CI.
 
 ## Обмеження
 
-* Автотести написані й перевірені статично (імпорт модулів, збирання тестів).
+* Автотести написані й перевірені статично (імпорт модулів, збирання тестів, перевірка стилю).
   Селектори звірено з DOM живого застосунку. Повний прогін UI/API потрібно виконати на машині
   з доступом до сайту; середовище, де готувався репозиторій, не мало мережевого доступу до нього.
 * Мобільна верстка, Firefox/WebKit і відкриття CSV в Excel вручну не перевірялися (див.

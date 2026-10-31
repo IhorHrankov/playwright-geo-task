@@ -16,6 +16,7 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install ruff
       - run: ruff check .
+      - run: python scripts/check_test_style.py
 
   e2e:
     needs: lint

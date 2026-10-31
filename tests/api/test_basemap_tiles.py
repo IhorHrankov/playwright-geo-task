@@ -1,6 +1,7 @@
-"""Third-party tile services the map depends on (no auth: public endpoints)."""
+"""Third-party tile services the map depends on (public endpoints, no auth).
 
-from __future__ import annotations
+Three different tiles over the fields area must have three different images.
+"""
 
 import pytest
 
@@ -9,25 +10,18 @@ from tests.known_bugs import known_bug
 
 pytestmark = [pytest.mark.api, pytest.mark.regression]
 
-# Two tiles over the fields area (Kyiv) at zoom 14, plus one far away at zoom 10.
-TILES = [(14, 9580, 5526), (14, 9580, 5527), (10, 598, 345)]
+
+def test_satellite_tile_is_an_image(tiles: TileClient) -> None:
+    response = tiles.esri(z=14, x=9580, y=5526)
+
+    assert response.status == 200
+    assert response.headers.get("content-type") == "image/jpeg"
 
 
-def test_satellite_tiles_are_served(tiles: TileClient) -> None:
-    bodies = []
-    for z, x, y in TILES:
-        response = tiles.esri(z, x, y)
-        assert response.status == 200
-        assert response.headers["content-type"].startswith("image/")
-        bodies.append(response.body())
-    assert len(set(bodies)) == len(TILES), "different tiles must have different content"
+def test_satellite_tiles_differ_from_each_other(tiles: TileClient) -> None:
+    assert tiles.esri_distinct_images(TileClient.KYIV_TILES) == 3
 
 
 @known_bug("BUG-07")
-def test_streets_tiles_are_real_map_images(tiles: TileClient) -> None:
-    bodies = []
-    for z, x, y in TILES:
-        response = tiles.carto(z, x, y)
-        assert response.status == 200
-        bodies.append(response.body())
-    assert len(set(bodies)) == len(TILES), "CARTO returns the same placeholder image for every tile"
+def test_street_tiles_differ_from_each_other(tiles: TileClient) -> None:
+    assert tiles.carto_distinct_images(TileClient.KYIV_TILES) == 3

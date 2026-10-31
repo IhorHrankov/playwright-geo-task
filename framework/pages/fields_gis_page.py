@@ -38,10 +38,13 @@ class FieldsGisPage(BasePage):
         self.fields.card(field).select()
         self.map.wait_until_idle()
 
-    def open_add_point_modal(self, field: Field, u: float = 0.5, v: float = 0.5) -> tuple[float, float]:
-        """Make ``field`` active, click inside it and return the clicked (lat, lng)."""
-        if not self.fields.card(field).is_active():
+    def open_add_point_modal(self, field: Field) -> None:
+        """Make ``field`` active and click in its centre."""
+        if self.fields.card(field).root.get_attribute("aria-pressed") != "true":
             self.select_field(field)
-        lat_lng = self.map.click_inside(field, u, v)
+        self.map.click_inside(field)
         self.add_point_modal.root.wait_for(state="visible")
-        return lat_lng
+
+    def add_point(self, field: Field, point_type, description: str = "") -> None:
+        self.open_add_point_modal(field)
+        self.add_point_modal.add(point_type, description)

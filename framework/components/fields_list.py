@@ -9,7 +9,7 @@ from framework.data.fields import Field
 
 
 class FieldCard(BaseComponent):
-    """One field in the sidebar (article role="button", aria-pressed = active)."""
+    """One field in the sidebar (article role="button"; aria-pressed="true" when active)."""
 
     @property
     def title(self) -> Locator:
@@ -18,12 +18,6 @@ class FieldCard(BaseComponent):
     @property
     def points_badge(self) -> Locator:
         return self.root.locator("span").last
-
-    def points_count(self) -> int:
-        return int(self.points_badge.inner_text().strip())
-
-    def is_active(self) -> bool:
-        return self.root.get_attribute("aria-pressed") == "true"
 
     def select(self) -> None:
         self.root.click()
@@ -41,8 +35,13 @@ class FieldsList(BaseComponent):
     def cards(self) -> Locator:
         return self.root.locator("article[aria-pressed]")
 
+    @property
+    def titles(self) -> Locator:
+        return self.cards.get_by_role("heading", level=3)
+
+    @property
+    def active_cards(self) -> Locator:
+        return self.root.locator("article[aria-pressed='true']")
+
     def card(self, field: Field) -> FieldCard:
         return FieldCard(self.root.get_by_role("button", name=re.compile(rf"^{re.escape(field.name)},")))
-
-    def active_card(self) -> FieldCard:
-        return FieldCard(self.root.locator("article[aria-pressed='true']"))

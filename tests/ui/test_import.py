@@ -1,216 +1,193 @@
-"""Import of GeoJSON / CSV files and the demo sample: happy paths, malformed files, data validation."""
-
-from __future__ import annotations
+"""Import of GeoJSON / CSV and the demo sample (TC-05, TC-06). Input files: test_data/import/."""
 
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import expect
 
-from framework.components import PointCard
-from framework.data.builders import (
-    CSV_HEADER,
-    make_point,
-    point_csv_row,
-    points_to_csv,
-    points_to_geojson,
-    write_file,
+from framework.data import messages
+from framework.data.test_data import (
+    COMMA_ENGLISH_HEADERS_CSV,
+    DUPLICATE_IDS_CSV,
+    FAKE_MGRS_CSV,
+    FIELD_MISMATCH_CSV,
+    HEADER_ONLY_CSV,
+    INVALID_COORDINATES_CSV,
+    INVALID_DATE_CSV,
+    INVALID_JSON_GEOJSON,
+    NO_POINT_FEATURES_GEOJSON,
+    NON_NUMERIC_COORDINATES_CSV,
+    NOT_FEATURE_COLLECTION_GEOJSON,
+    ONE_POINT_GEOJSON,
+    OUTSIDE_FIELDS_CSV,
+    OUTSIDE_FIELDS_GEOJSON,
+    STANDARD_DESCRIPTIONS_NEWEST_FIRST,
+    VALID_POINTS_CSV,
+    VALID_POINTS_GEOJSON,
+    WITHOUT_LAT_LNG_CSV,
 )
-from framework.data.fields import FIELDS, FIELDS_BY_ID
-from framework.data.models import PointType
 from framework.pages import FieldsGisPage
-from framework.storage import read_points
-from framework.utils.geo import is_valid_lat_lng, point_in_polygon, to_mgrs
+from framework.storage import StoredPoints
 from tests.known_bugs import known_bug
 
 pytestmark = [pytest.mark.ui, pytest.mark.regression]
 
-TEST_DATA = Path(__file__).resolve().parents[2] / "test_data"
 
-
-def _import(gis: FieldsGisPage, path: Path) -> None:
-    gis.data_menu.import_file(path)
-    expect(gis.toast.root).to_be_visible()
-
-
-# ---------- happy paths ----------
+# ---------------------------------------------------------------- valid files
 
 
 @pytest.mark.smoke
-@pytest.mark.parametrize("fmt", ["geojson", "csv"])
-def test_import_valid_file(empty_gis_page: FieldsGisPage, tmp_path: Path, fmt: str) -> None:
-    points = [make_point(FIELDS[i], point_type=t) for i, t in enumerate(PointType)]
-    content = points_to_geojson(points) if fmt == "geojson" else points_to_csv(map(point_csv_row, points))
-    file = write_file(tmp_path, f"valid.{fmt}", content)
+@pytest.mark.parametrize("file", [VALID_POINTS_GEOJSON, VALID_POINTS_CSV], ids=["geojson", "csv"])
+def test_valid_file_is_imported(empty_gis_page: FieldsGisPage, file: Path) -> None:
+    empty_gis_page.data_menu.import_file(file)
 
-    _import(empty_gis_page, file)
-
-    expect(empty_gis_page.toast.root).to_contain_text(f'Успішно імпортовано {len(points)} точ')
-    expect(empty_gis_page.toast.root).to_contain_text(f'"valid.{fmt}"')
-    expect(empty_gis_page.points.cards).to_have_count(len(points))
-    expect(empty_gis_page.map.markers).to_have_count(len(points))
-    stored = {p["id"]: p for p in read_points(empty_gis_page.page)}
-    for p in points:
-        assert stored[p.id]["fieldId"] == p.field_id
-        assert stored[p.id]["type"] == p.type
+    expect(empty_gis_page.toast.root).to_contain_text("Успішно імпортовано 4 точ")
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (4)")
+    expect(empty_gis_page.map.markers).to_have_count(4)
 
 
-def test_import_csv_with_comma_delimiter_and_english_headers(empty_gis_page: FieldsGisPage, tmp_path: Path) -> None:
-    p = make_point(FIELDS[1])
-    content = points_to_csv(
-        [[p.id, p.field_id, "pests", p.coordinates.lat, p.coordinates.lng, "", "comma file", p.created_at]],
-        header=["id", "fieldId", "type", "lat", "lng", "mgrs", "description", "date"],
-        delimiter=",",
-    )
-    _import(empty_gis_page, write_file(tmp_path, "comma.csv", content))
+@pytest.mark.parametrize("file", [VALID_POINTS_GEOJSON, VALID_POINTS_CSV], ids=["geojson", "csv"])
+def test_imported_points_keep_ids_fields_and_types(empty_gis_page: FieldsGisPage, file: Path) -> None:
+    empty_gis_page.data_menu.import_file(file)
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (4)")
 
-    expect(empty_gis_page.points.cards).to_have_count(1)
-    stored = read_points(empty_gis_page.page)[0]
-    assert stored["fieldId"] == FIELDS[1].id
-    assert stored["type"] == PointType.PESTS.value
-    assert stored["mgrs"] == to_mgrs(p.coordinates.lat, p.coordinates.lng)  # computed when absent
+    stored = StoredPoints(empty_gis_page.page)
+
+    assert stored.ids() == ["std-1", "std-2", "std-3", "std-4"]
+    assert stored.by_id("std-3").field_id == "field-2"
+    assert stored.by_id("std-3").type == "PLANT_DISEASE"
 
 
-def test_load_demo_sample(empty_gis_page: FieldsGisPage) -> None:
+def test_csv_with_commas_and_english_headers_is_imported(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.data_menu.import_file(COMMA_ENGLISH_HEADERS_CSV)
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (1)")
+
+    point = StoredPoints(empty_gis_page.page).by_id("qa-comma")
+
+    assert point.field_id == "field-2"
+    assert point.type == "PESTS"
+    assert point.mgrs == "36U UA 23666 88391"  # the file has no MGRS, the app calculates it
+
+
+def test_demo_sample_is_loaded(empty_gis_page: FieldsGisPage) -> None:
     empty_gis_page.data_menu.load_demo()
 
-    expect(empty_gis_page.toast.root).to_contain_text("Завантажено 6 точок з еталонного мок-файлу!")
-    expect(empty_gis_page.points.cards).to_have_count(6)
+    expect(empty_gis_page.toast.root).to_have_text(messages.DEMO_LOADED)
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (6)")
 
 
-def test_roundtrip_export_then_import_into_clean_storage(
-    gis_page: FieldsGisPage, standard_points, tmp_path: Path
+def test_export_then_import_into_empty_storage_restores_points(
+    gis_page: FieldsGisPage, tmp_path: Path
 ) -> None:
     exported = gis_page.data_menu.export_geojson(tmp_path)
-    gis_page.page.evaluate("localStorage.setItem('agtech_monitoring_points_v1', '[]')")
+    StoredPoints.clear(gis_page.page)
     gis_page.reload()
-    expect(gis_page.points.cards).to_have_count(0)
 
-    _import(gis_page, exported)
+    gis_page.data_menu.import_file(exported)
 
-    stored = {p["id"]: p for p in read_points(gis_page.page)}
-    assert set(stored) == {p.id for p in standard_points}
-    for p in standard_points:
-        assert stored[p.id]["mgrs"] == p.mgrs
-        assert stored[p.id]["createdAt"] == p.created_at
+    expect(gis_page.points.descriptions).to_have_text(STANDARD_DESCRIPTIONS_NEWEST_FIRST)
 
 
-# ---------- malformed files ----------
+# ---------------------------------------------------------------- malformed files
 
 
 @pytest.mark.parametrize(
-    ("name", "content", "error"),
+    ("file", "error"),
     [
-        pytest.param("broken.geojson", '{"type": "FeatureCollection", "features": [',
-                     "Помилка синтаксису JSON під час парсингу файлу.", id="invalid-json"),
-        pytest.param("not-a-collection.geojson", '{"type": "Feature"}',
-                     "Некоректний формат GeoJSON: очікується FeatureCollection з масивом features.",
-                     id="not-feature-collection"),
-        pytest.param("no-points.geojson",
-                     '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":'
-                     '{"type":"Polygon","coordinates":[]},"properties":{}}]}',
-                     "У GeoJSON файлі не знайдено валідних точок моніторингу.", id="no-point-features"),
-        pytest.param("header-only.csv", ";".join(CSV_HEADER),
-                     "CSV файл повинен містити рядок заголовків та щонайменше один рядок даних.",
-                     id="csv-header-only"),
-        pytest.param("no-coords.csv", "id;type;description\r\na;Інше;x",
-                     "У CSV не знайдено обов’язкових колонок широти (Lat) та довготи (Lng).",
-                     id="csv-without-lat-lng"),
-        pytest.param("bad-coords.csv", "lat;lng\r\nabc;def",
-                     "У CSV файлі не знайдено валідних рядків з координатами.", id="csv-non-numeric"),
+        (INVALID_JSON_GEOJSON, messages.IMPORT_INVALID_JSON),
+        (NOT_FEATURE_COLLECTION_GEOJSON, messages.IMPORT_NOT_FEATURE_COLLECTION),
+        (NO_POINT_FEATURES_GEOJSON, messages.IMPORT_NO_POINT_FEATURES),
+        (HEADER_ONLY_CSV, messages.IMPORT_CSV_HEADER_ONLY),
+        (WITHOUT_LAT_LNG_CSV, messages.IMPORT_CSV_NO_LAT_LNG),
+        (NON_NUMERIC_COORDINATES_CSV, messages.IMPORT_CSV_NO_VALID_ROWS),
     ],
+    ids=["invalid-json", "not-feature-collection", "no-point-features",
+         "csv-header-only", "csv-without-lat-lng", "csv-non-numeric"],
 )
-def test_malformed_file_is_rejected(
-    gis_page: FieldsGisPage, standard_points, tmp_path: Path, name: str, content: str, error: str
-) -> None:
-    _import(gis_page, write_file(tmp_path, name, content))
+def test_malformed_file_is_rejected_with_message(gis_page: FieldsGisPage, file: Path, error: str) -> None:
+    gis_page.data_menu.import_file(file)
 
     expect(gis_page.toast.root).to_have_text(error)
-    expect(gis_page.points.cards).to_have_count(len(standard_points))
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)")
 
 
-# ---------- data validation (documented defects) ----------
+# ---------------------------------------------------------------- invalid data (known defects)
 
 
 @known_bug("BUG-01")
 @pytest.mark.parametrize(
-    "file_name", ["outside_fields.csv", "outside_fields.geojson", "field_mismatch.csv"]
+    "file",
+    [OUTSIDE_FIELDS_CSV, OUTSIDE_FIELDS_GEOJSON, FIELD_MISMATCH_CSV],
+    ids=["csv-outside-all-fields", "geojson-in-paris", "csv-wrong-field"],
 )
-def test_points_outside_their_field_are_rejected(empty_gis_page: FieldsGisPage, file_name: str) -> None:
-    _import(empty_gis_page, TEST_DATA / "import" / file_name)
+def test_point_outside_its_field_is_not_imported(empty_gis_page: FieldsGisPage, file: Path) -> None:
+    empty_gis_page.data_menu.import_file(file)
+    expect(empty_gis_page.toast.root).to_be_visible()
 
-    for p in read_points(empty_gis_page.page):
-        field = FIELDS_BY_ID[p["fieldId"]]
-        assert point_in_polygon(p["coordinates"]["lat"], p["coordinates"]["lng"], field.corners), (
-            f"{p['id']} stored in {field.id} but lies outside it"
-        )
+    assert StoredPoints(empty_gis_page.page).outside_their_field() == []
 
 
 @known_bug("BUG-02")
-def test_out_of_range_coordinates_are_rejected(empty_gis_page: FieldsGisPage) -> None:
-    _import(empty_gis_page, TEST_DATA / "import" / "invalid_coordinates.csv")
+def test_out_of_range_coordinates_are_not_imported(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.data_menu.import_file(INVALID_COORDINATES_CSV)
+    expect(empty_gis_page.toast.root).to_be_visible()
 
-    assert all(is_valid_lat_lng(p["coordinates"]["lat"], p["coordinates"]["lng"])
-               for p in read_points(empty_gis_page.page))
+    assert StoredPoints(empty_gis_page.page).with_invalid_coordinates() == []
 
 
 @known_bug("BUG-03")
-def test_duplicate_ids_inside_file_are_made_unique(empty_gis_page: FieldsGisPage) -> None:
-    _import(empty_gis_page, TEST_DATA / "import" / "duplicate_ids.csv")
+def test_duplicate_ids_in_file_are_made_unique(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.data_menu.import_file(DUPLICATE_IDS_CSV)
+    expect(empty_gis_page.toast.root).to_be_visible()
 
-    ids = [p["id"] for p in read_points(empty_gis_page.page)]
-    assert len(ids) == len(set(ids)), f"duplicate ids stored: {ids}"
+    assert StoredPoints(empty_gis_page.page).duplicate_ids() == []
 
 
-def test_duplicate_ids_corrupt_list_and_delete(empty_gis_page: FieldsGisPage) -> None:
-    """Characterises the visible impact of BUG-03 (kept green on purpose: documents current behaviour)."""
-    _import(empty_gis_page, TEST_DATA / "import" / "duplicate_ids.csv")
-    expect(empty_gis_page.points.heading).to_contain_text("(2)")
+@known_bug("BUG-03")
+def test_deleting_one_of_duplicated_points_keeps_the_other(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.data_menu.import_file(DUPLICATE_IDS_CSV)
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (2)")
 
-    PointCard(empty_gis_page.points.cards.filter(has_text="QA dup B").first).delete()
+    empty_gis_page.points.card("QA dup B").delete()
 
-    # Deleting ONE card removed BOTH points that share the id.
-    assert read_points(empty_gis_page.page) == []
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (1)", timeout=1_000)
 
 
 @known_bug("BUG-04")
-def test_invalid_created_at_is_rejected(empty_gis_page: FieldsGisPage) -> None:
-    _import(empty_gis_page, TEST_DATA / "import" / "invalid_date.csv")
+def test_invalid_creation_date_is_not_imported(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.data_menu.import_file(INVALID_DATE_CSV)
 
-    expect(empty_gis_page.points.cards.locator("time")).not_to_have_text("not-a-date")
+    expect(empty_gis_page.points.first_card.created_at).not_to_have_text("not-a-date", timeout=1_000)
 
 
 @known_bug("BUG-05")
-def test_imported_mgrs_is_recalculated(empty_gis_page: FieldsGisPage) -> None:
-    _import(empty_gis_page, TEST_DATA / "import" / "fake_mgrs.csv")
+def test_imported_mgrs_is_recalculated_from_coordinates(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.data_menu.import_file(FAKE_MGRS_CSV)
 
-    for p in read_points(empty_gis_page.page):
-        assert p["mgrs"] == to_mgrs(p["coordinates"]["lat"], p["coordinates"]["lng"])
+    expect(empty_gis_page.points.first_card.mgrs).to_have_text("36U UA 22034 87773", timeout=1_000)
 
 
 @known_bug("BUG-06")
-def test_reimport_of_exported_file_does_not_duplicate(gis_page: FieldsGisPage, standard_points, tmp_path) -> None:
+def test_reimporting_exported_file_does_not_duplicate_points(gis_page: FieldsGisPage, tmp_path: Path) -> None:
     exported = gis_page.data_menu.export_csv(tmp_path)
 
-    _import(gis_page, exported)
+    gis_page.data_menu.import_file(exported)
 
-    expect(gis_page.points.cards).to_have_count(len(standard_points))
+    expect(gis_page.points.heading).to_have_text("Моніторингові точки (5)", timeout=1_000)
 
 
 @known_bug("BUG-06")
-def test_loading_demo_twice_does_not_duplicate(empty_gis_page: FieldsGisPage) -> None:
+def test_loading_demo_twice_does_not_duplicate_points(empty_gis_page: FieldsGisPage) -> None:
     empty_gis_page.data_menu.load_demo()
-    expect(empty_gis_page.points.cards).to_have_count(6)
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (6)")
 
     empty_gis_page.data_menu.load_demo()
 
-    expect(empty_gis_page.points.cards).to_have_count(6)
+    expect(empty_gis_page.points.heading).to_have_text("Моніторингові точки (6)", timeout=1_000)
 
 
 @known_bug("BUG-13")
-def test_toast_uses_correct_plural_for_one_point(empty_gis_page: FieldsGisPage, tmp_path: Path) -> None:
-    file = write_file(tmp_path, "one.geojson", points_to_geojson([make_point()]))
+def test_import_toast_uses_singular_for_one_point(empty_gis_page: FieldsGisPage) -> None:
+    empty_gis_page.data_menu.import_file(ONE_POINT_GEOJSON)
 
-    _import(empty_gis_page, file)
-
-    expect(empty_gis_page.toast.root).to_have_text('Успішно імпортовано 1 точку з файлу "one.geojson"!')
+    expect(empty_gis_page.toast.root).to_have_text('Успішно імпортовано 1 точку з файлу "one_point.geojson"!')

@@ -4,7 +4,7 @@ from playwright.sync_api import Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from framework.components.base_component import BaseComponent
-from framework.data.fields import FIELDS, Field
+from framework.data.fields import Field
 
 BASEMAP_BUTTONS = {"streets": "Схема", "satellite": "Супутник"}
 
@@ -54,7 +54,7 @@ class MapView(BaseComponent):
 
     def polygon(self, field: Field) -> Locator:
         # react-leaflet renders the GeoJSON layers in the same order as the fields list
-        return self.field_polygons.nth(FIELDS.index(field))
+        return self.field_polygons.nth(field.order)
 
     # --- helpers ---
     def wait_until_idle(self, timeout_ms: int = 5_000) -> None:
@@ -84,11 +84,17 @@ class MapView(BaseComponent):
         y = box["y"] + (max_lat - lat) / (max_lat - min_lat) * box["height"]
         return x, y
 
-    def active_basemap_is(self, basemap: str) -> bool:
-        return "bg-emerald-600" in (self.basemap_button(basemap).get_attribute("class") or "")
+    def tiles_from(self, host: str) -> Locator:
+        return self.root.locator(f".leaflet-tile-pane img.leaflet-tile[src*='{host}']")
 
-    def tile_sources(self) -> list[str]:
-        return self.tiles.evaluate_all("imgs => imgs.map(i => i.src)")
+    def loaded_street_tiles_are_distinct(self) -> bool:
+        """CARTO answers every tile with one identical 'API KEY REQUIRED' image when the key is missing."""
+        sources = self.tiles_from("basemaps.cartocdn.com").evaluate_all("imgs => imgs.map(i => i.src)")
+        bodies = {self.page.request.get(src).body() for src in sources[:4]}
+        return len(bodies) > 1
+
+    def polygon_position(self, field: Field) -> dict:
+        return self.polygon(field).bounding_box()
 
     # --- actions ---
     def click_at(self, field: Field, lat: float, lng: float) -> None:
@@ -114,8 +120,8 @@ class MapView(BaseComponent):
         self.focus_button.click()
         self.wait_until_idle()
 
-    def has_marker_at_center(self, tolerance_px: int = 25, timeout_ms: int = 3_000) -> bool:
-        """True if some marker sits at the centre of the map viewport (after flyTo)."""
+    def is_a_marker_centered(self, tolerance_px: int = 25, timeout_ms: int = 3_000) -> bool:
+        """True if some marker sits at the centre of the map viewport (waits for flyTo)."""
         try:
             self.page.wait_for_function(
                 """tol => {
