@@ -1,0 +1,22 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.35,
+          48.85
+        ]
+      },
+      "properties": {
+        "id": "qa-geo-paris",
+        "fieldId": "field-3",
+        "type": "pests",
+        "description": "QA GeoJSON Paris point",
+        "createdAt": "31/10/2026"
+      }
+    }
+  ]
+}

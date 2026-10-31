@@ -1,0 +1,74 @@
+[
+  {
+    "id": "sample-pt-6",
+    "fieldId": "field-4",
+    "coordinates": {
+      "lat": 50.437,
+      "lng": 30.532
+    },
+    "mgrs": "36U UA 24744 90130",
+    "type": "PESTS",
+    "description": "Моніторинг пасток на ріпакового квіткоїда (3 екз/рослину)",
+    "createdAt": "2026-09-24T07:10:00.000Z"
+  },
+  {
+    "id": "sample-pt-5",
+    "fieldId": "field-1",
+    "coordinates": {
+      "lat": 50.413,
+      "lng": 30.492
+    },
+    "mgrs": "36U UA 21814 87557",
+    "type": "OTHER",
+    "description": "Контрольна точка встановлення метеостанції та датчика листя",
+    "createdAt": "2026-09-23T16:20:00.000Z"
+  },
+  {
+    "id": "sample-pt-4",
+    "fieldId": "field-4",
+    "coordinates": {
+      "lat": 50.435,
+      "lng": 30.528
+    },
+    "mgrs": "36U UA 24452 89918",
+    "type": "SOIL_SAMPLE",
+    "description": "Замір вологості горизонту 10-20 см (TDR-вологомір 24%)",
+    "createdAt": "2026-09-23T09:00:00.000Z"
+  },
+  {
+    "id": "sample-pt-3",
+    "fieldId": "field-3",
+    "coordinates": {
+      "lat": 50.434,
+      "lng": 30.501
+    },
+    "mgrs": "36U UA 22531 89870",
+    "type": "PLANT_DISEASE",
+    "description": "Початкові симптоми пухирчастої сажки після зливи",
+    "createdAt": "2026-09-22T14:45:00.000Z"
+  },
+  {
+    "id": "sample-pt-2",
+    "fieldId": "field-2",
+    "coordinates": {
+      "lat": 50.418,
+      "lng": 30.525
+    },
+    "mgrs": "36U UA 24176 88035",
+    "type": "PESTS",
+    "description": "Локальний осередок лучного метелика на східному краї поля",
+    "createdAt": "2026-09-21T10:15:00.000Z"
+  },
+  {
+    "id": "sample-pt-1",
+    "fieldId": "field-1",
+    "coordinates": {
+      "lat": 50.416,
+      "lng": 30.498
+    },
+    "mgrs": "36U UA 22251 87877",
+    "type": "SOIL_SAMPLE",
+    "description": "Аналіз кислотності ґрунту (pH 6.2) та вмісту калію",
+    "createdAt": "2026-09-20T08:30:00.000Z"
+  }
+]
