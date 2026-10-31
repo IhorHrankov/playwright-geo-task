@@ -1,9 +1,10 @@
-"""Fields: list, default selection, switching the active field."""
+"""Поля: список, вибір за замовчуванням, перемикання активного поля."""
 
 import pytest
 from playwright.sync_api import expect
 
 from framework.data.fields import FIELD_1, FIELD_2, FIELD_3, FIELD_4
+from framework.data.ui_texts import UI
 from framework.pages import FieldsGisPage
 from tests.known_bugs import known_bug
 
@@ -12,22 +13,24 @@ pytestmark = [pytest.mark.ui, pytest.mark.regression]
 
 @pytest.mark.smoke
 def test_fields_list_shows_four_fields(gis_page: FieldsGisPage) -> None:
-    expect(gis_page.fields.heading).to_have_text("Сільгосп поля (4)")
-    expect(gis_page.fields.titles).to_have_text([
-        "Поле №1 - Озима пшениця",
-        "Поле №2 - Соняшник класичний",
-        "Поле №3 - Кукурудза на зерно",
-        "Поле №4 - Ріпак озимий",
-    ])
+    expect(gis_page.fields.heading).to_have_text(UI.fields_gis.fields.heading(count=4))
+    expect(gis_page.fields.titles).to_have_text(
+        [
+            UI.fields_gis.fields.field_1.name,
+            UI.fields_gis.fields.field_2.name,
+            UI.fields_gis.fields.field_3.name,
+            UI.fields_gis.fields.field_4.name,
+        ]
+    )
 
 
 @pytest.mark.parametrize(
     ("field", "area", "crop"),
     [
-        (FIELD_1, "68.4 га", "Озима пшениця"),
-        (FIELD_2, "52.1 га", "Соняшник"),
-        (FIELD_3, "84.7 га", "Кукурудза"),
-        (FIELD_4, "41.3 га", "Ріпак"),
+        (FIELD_1, UI.fields_gis.fields.field_1.area, UI.fields_gis.fields.field_1.crop),
+        (FIELD_2, UI.fields_gis.fields.field_2.area, UI.fields_gis.fields.field_2.crop),
+        (FIELD_3, UI.fields_gis.fields.field_3.area, UI.fields_gis.fields.field_3.crop),
+        (FIELD_4, UI.fields_gis.fields.field_4.area, UI.fields_gis.fields.field_4.crop),
     ],
     ids=["field-1", "field-2", "field-3", "field-4"],
 )
@@ -72,14 +75,21 @@ def test_clicking_inactive_field_on_map_selects_it_without_adding_point(gis_page
 def test_hovering_field_shows_tooltip_with_name_area_and_crop(gis_page: FieldsGisPage) -> None:
     gis_page.map.polygon(FIELD_1).hover()
 
-    expect(gis_page.page.locator(".leaflet-tooltip")).to_contain_text("Поле №1 - Озима пшениця")
-    expect(gis_page.page.locator(".leaflet-tooltip")).to_contain_text("68.4 га • Озима пшениця")
+    expect(gis_page.page.locator(".leaflet-tooltip")).to_contain_text(UI.fields_gis.fields.field_1.name)
+    expect(gis_page.page.locator(".leaflet-tooltip")).to_contain_text(
+        UI.fields_gis.fields.field_1.tooltip_details
+    )
 
 
 @known_bug("BUG-08")
 @pytest.mark.parametrize(
     ("field", "area_by_geometry"),
-    [(FIELD_1, "176.1 га"), (FIELD_2, "149.2 га"), (FIELD_3, "192.6 га"), (FIELD_4, "143.7 га")],
+    [
+        (FIELD_1, UI.fields_gis.fields.field_1.area_by_geometry),
+        (FIELD_2, UI.fields_gis.fields.field_2.area_by_geometry),
+        (FIELD_3, UI.fields_gis.fields.field_3.area_by_geometry),
+        (FIELD_4, UI.fields_gis.fields.field_4.area_by_geometry),
+    ],
     ids=["field-1", "field-2", "field-3", "field-4"],
 )
 def test_field_area_matches_polygon_geometry(gis_page: FieldsGisPage, field, area_by_geometry: str) -> None:

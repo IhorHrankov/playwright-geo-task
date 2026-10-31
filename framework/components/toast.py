@@ -6,7 +6,7 @@ from framework.components.base_component import BaseComponent
 
 
 class Toast(BaseComponent):
-    """Notification shown after actions (role="status")."""
+    """Сповіщення після дій (role="status")."""
 
     def __init__(self, page: Page) -> None:
         super().__init__(page.get_by_role("status"))

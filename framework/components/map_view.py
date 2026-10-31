@@ -10,17 +10,17 @@ BASEMAP_BUTTONS = {"streets": "Схема", "satellite": "Супутник"}
 
 
 class MapView(BaseComponent):
-    """Leaflet map: field polygons (SVG paths), point markers, basemap switcher, focus button.
+    """Карта Leaflet: полігони полів (SVG paths), маркери точок, перемикач підкладок, кнопка фокуса.
 
-    Leaflet does not expose geo coordinates in the DOM, so clicks at a given lat/lng are
-    computed from the rendered polygon's bounding box and the field's known geometry
-    (linear interpolation; Mercator distortion over ~1 km is far below one pixel).
+    Leaflet не показує геокоординати в DOM, тому кліки за заданими lat/lng обчислюються
+    з bounding box відмальованого полігона та відомої геометрії поля (лінійна інтерполяція;
+    спотворення Меркатора на ~1 км значно менше за один піксель).
     """
 
     def __init__(self, page: Page) -> None:
         super().__init__(page.get_by_role("main", name="Робоча область інтерактивної карти"))
 
-    # --- locators ---
+    # --- локатори ---
     @property
     def container(self) -> Locator:
         return self.root.locator(".leaflet-container")
@@ -53,12 +53,12 @@ class MapView(BaseComponent):
         return self.root.get_by_role("button", name=BASEMAP_BUTTONS[basemap], exact=True)
 
     def polygon(self, field: Field) -> Locator:
-        # react-leaflet renders the GeoJSON layers in the same order as the fields list
+        # react-leaflet рендерить шари GeoJSON у тому самому порядку, що й список полів
         return self.field_polygons.nth(field.order)
 
-    # --- helpers ---
+    # --- допоміжне ---
     def wait_until_idle(self, timeout_ms: int = 5_000) -> None:
-        """Wait until pan/zoom animations finish (Leaflet adds *-anim classes while animating)."""
+        """Чекає завершення анімацій pan/zoom (Leaflet додає класи *-anim на час анімації)."""
         self.page.wait_for_function(
             """() => {
                 const m = document.querySelector('.leaflet-container');
@@ -67,7 +67,7 @@ class MapView(BaseComponent):
             }""",
             timeout=timeout_ms,
         )
-        # flyTo/fitBounds may still move the map without those classes; wait for a stable polygon box
+        # flyTo/fitBounds можуть рухати карту й без цих класів; чекаємо стабільний box полігона
         previous = None
         for _ in range(20):
             box = self.field_polygons.first.bounding_box()
@@ -88,7 +88,7 @@ class MapView(BaseComponent):
         return self.root.locator(f".leaflet-tile-pane img.leaflet-tile[src*='{host}']")
 
     def loaded_street_tiles_are_distinct(self) -> bool:
-        """CARTO answers every tile with one identical 'API KEY REQUIRED' image when the key is missing."""
+        """Без ключа CARTO відповідає на кожен тайл однаковим зображенням «API KEY REQUIRED»."""
         sources = self.tiles_from("basemaps.cartocdn.com").evaluate_all("imgs => imgs.map(i => i.src)")
         bodies = {self.page.request.get(src).body() for src in sources[:4]}
         return len(bodies) > 1
@@ -96,9 +96,9 @@ class MapView(BaseComponent):
     def polygon_position(self, field: Field) -> dict:
         return self.polygon(field).bounding_box()
 
-    # --- actions ---
+    # --- дії ---
     def click_at(self, field: Field, lat: float, lng: float) -> None:
-        """Click the map at a geographic point, using ``field`` as the pixel reference."""
+        """Клік по карті в географічній точці; ``field`` — піксельний орієнтир."""
         self.wait_until_idle()
         x, y = self._pixel_for(field, lat, lng)
         self.page.mouse.click(x, y)
@@ -109,7 +109,7 @@ class MapView(BaseComponent):
         return lat, lng
 
     def click_outside_fields(self, reference: Field) -> None:
-        """Click just south-west of ``reference`` where no field polygon is drawn."""
+        """Клік трохи південно-західніше від ``reference``, де немає полігона поля."""
         min_lng, min_lat, _, _ = reference.bounds
         self.click_at(reference, min_lat - 0.002, min_lng - 0.002)
 
@@ -121,7 +121,7 @@ class MapView(BaseComponent):
         self.wait_until_idle()
 
     def is_a_marker_centered(self, tolerance_px: int = 25, timeout_ms: int = 3_000) -> bool:
-        """True if some marker sits at the centre of the map viewport (waits for flyTo)."""
+        """True, якщо якийсь маркер у центрі області карти (чекає на flyTo)."""
         try:
             self.page.wait_for_function(
                 """tol => {

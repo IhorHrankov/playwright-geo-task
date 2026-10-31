@@ -1,17 +1,17 @@
-"""Domain models: monitoring points as stored by the app, plus GeoJSON export/import contracts."""
+"""Доменні моделі: моніторингові точки в тому вигляді, як їх зберігає застосунок."""
 
 from __future__ import annotations
 
-from datetime import datetime
-from enum import Enum
-from typing import Literal
+from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
+
+from framework.data.ui_texts import UI
 
 STORAGE_KEY = "agtech_monitoring_points_v1"
 
 
-class PointType(str, Enum):
+class PointType(StrEnum):
     SOIL_SAMPLE = "SOIL_SAMPLE"
     PESTS = "PESTS"
     PLANT_DISEASE = "PLANT_DISEASE"
@@ -23,10 +23,10 @@ class PointType(str, Enum):
 
 
 POINT_TYPE_LABELS: dict[PointType, str] = {
-    PointType.SOIL_SAMPLE: "Проба ґрунту",
-    PointType.PESTS: "Шкідники",
-    PointType.PLANT_DISEASE: "Хвороби рослин",
-    PointType.OTHER: "Інше",
+    PointType.SOIL_SAMPLE: UI.fields_gis.point_types.soil_sample,
+    PointType.PESTS: UI.fields_gis.point_types.pests,
+    PointType.PLANT_DISEASE: UI.fields_gis.point_types.plant_disease,
+    PointType.OTHER: UI.fields_gis.point_types.other,
 }
 
 
@@ -36,7 +36,7 @@ class Coordinates(BaseModel):
 
 
 class MonitoringPoint(BaseModel):
-    """A point exactly as the app keeps it in localStorage."""
+    """Точка саме в тому вигляді, як застосунок тримає її в localStorage."""
 
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
@@ -50,47 +50,3 @@ class MonitoringPoint(BaseModel):
 
     def to_storage(self) -> dict:
         return self.model_dump(by_alias=True, exclude_none=True)
-
-
-# ---------- GeoJSON contract (export file and /samples/*.geojson) ----------
-
-
-class PointGeometry(BaseModel):
-    type: Literal["Point"]
-    coordinates: tuple[float, float]  # [lng, lat]
-
-    @field_validator("coordinates")
-    @classmethod
-    def _in_wgs84_range(cls, value: tuple[float, float]) -> tuple[float, float]:
-        lng, lat = value
-        if not (-180 <= lng <= 180 and -90 <= lat <= 90):
-            raise ValueError(f"coordinates out of WGS84 range: {value}")
-        return value
-
-
-class PointProperties(BaseModel):
-    id: str
-    fieldId: str
-    fieldName: str
-    type: PointType
-    typeLabel: str
-    mgrs: str
-    description: str
-    createdAt: str
-
-    @field_validator("createdAt")
-    @classmethod
-    def _iso8601(cls, value: str) -> str:
-        datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return value
-
-
-class PointFeature(BaseModel):
-    type: Literal["Feature"]
-    geometry: PointGeometry
-    properties: PointProperties
-
-
-class PointFeatureCollection(BaseModel):
-    type: Literal["FeatureCollection"]
-    features: list[PointFeature]

@@ -1,4 +1,4 @@
-"""Base class for components: every component is scoped to its own root locator."""
+"""Базовий клас компонентів: кожен компонент обмежений власним кореневим локатором."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Reading files produced by the app (downloads) and expected-result files."""
+"""Читання файлів, створених застосунком (завантаження), і файлів-еталонів."""
 
 from __future__ import annotations
 
@@ -11,5 +11,5 @@ def read_json(path: Path) -> dict:
 
 
 def read_text(path: Path) -> str:
-    """Exact text, BOM and line endings preserved."""
+    """Точний текст зі збереженням BOM і кінців рядків."""
     return path.read_bytes().decode("utf-8")

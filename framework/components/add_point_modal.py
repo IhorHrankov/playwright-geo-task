@@ -8,15 +8,15 @@ from framework.utils.geo import mgrs_close, point_in_polygon, to_mgrs
 
 
 class AddPointModal(BaseComponent):
-    """Dialog 'Додати моніторингову точку' opened by a click inside the active field."""
+    """Діалог «Додати моніторингову точку», що відкривається кліком усередині активного поля."""
 
     def __init__(self, page: Page) -> None:
         super().__init__(page.get_by_role("dialog", name="Додати моніторингову точку"))
 
-    # --- locators ---
+    # --- локатори ---
     @property
     def coordinates_text(self) -> Locator:
-        """'50.41254, 30.50097' (WGS 84, 5 decimals)."""
+        """'50.41254, 30.50097' (WGS 84, 5 знаків після коми)."""
         return self.root.locator("section > div").nth(0).locator(":scope > span").nth(1)
 
     @property
@@ -39,7 +39,7 @@ class AddPointModal(BaseComponent):
     def error_message(self) -> Locator:
         return self.root.get_by_role("alert")
 
-    # --- actions ---
+    # --- дії ---
     def add(self, point_type: PointType, description: str = "") -> None:
         self.type_select.select_option(point_type.value)
         self.description_input.fill(description)
@@ -57,9 +57,9 @@ class AddPointModal(BaseComponent):
     def press_escape(self) -> None:
         self.page.keyboard.press("Escape")
 
-    # --- domain checks (logic stays here, tests read as one sentence) ---
+    # --- доменні перевірки (логіка лишається тут, тест читається одним реченням) ---
     def shows_mgrs_of_shown_coordinates(self) -> bool:
-        """MGRS matches the shown coordinates (1 m tolerance: coordinates are rounded to 5 decimals)."""
+        """MGRS відповідає показаним координатам (допуск 1 м: координати округлені до 5 знаків)."""
         lat, lng = (float(x) for x in self.coordinates_text.inner_text().split(","))
         return mgrs_close(self.mgrs_text.inner_text(), to_mgrs(lat, lng))
 

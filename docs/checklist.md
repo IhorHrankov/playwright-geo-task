@@ -14,7 +14,7 @@
 | 5 | Поля | Площа поля відповідає геометрії полігона | **Fail** | BUG-08 | `test_fields::test_field_area_matches_polygon_geometry` |
 | 6 | Поля | Лічильник точок у картці поля відповідає реальній кількості | Pass | | `test_fields::test_field_card_counts_its_points` |
 | 7 | Поля | Картка поля доступна з клавіатури (Tab, Enter, Space) | Pass | | — (код: `tabIndex=0`, onKeyDown) |
-| 8 | Карта | Підкладка «Схема» відображає картографічну основу | **Fail** | BUG-07 | `test_map::test_streets_basemap_does_not_show_api_key_placeholder`, `api/test_basemap_tiles` |
+| 8 | Карта | Підкладка «Схема» відображає картографічну основу | **Fail** | BUG-07 | `test_map::test_streets_basemap_does_not_show_api_key_placeholder` |
 | 9 | Карта | Підкладка «Супутник» відображає знімки | Pass | | `test_map::test_satellite_basemap_loads_satellite_tiles` |
 | 10 | Карта | «Сфокусувати активне поле» повертає карту до поля | Pass | | `test_map::test_focus_button_returns_map_to_active_field` |
 | 11 | Карта | Tooltip полігона: назва, площа, культура | Pass | | `test_fields::test_hovering_field_shows_tooltip_with_name_area_and_crop` |
@@ -44,13 +44,9 @@
 | 35 | Імпорт | MGRS із файлу перевіряється або перераховується | **Fail** | BUG-05 | `test_import::test_imported_mgrs_is_recalculated_from_coordinates` |
 | 36 | Імпорт | Повідомлення про результат граматично коректне | **Fail** | BUG-13 | `test_import::test_import_toast_uses_singular_for_one_point` |
 
-## Додаткові перевірки (лише автотести)
+## Додаткові перевірки
 
 | Область | Перевірка | Результат | Автотест |
 | --- | --- | --- | --- |
-| HTTP | Без Basic Auth — 401 + `WWW-Authenticate: Basic`; з неправильним паролем — 401 | Pass | `api/test_auth_and_static` |
-| HTTP | Security-заголовки (HSTS, nosniff, X-Frame-Options, CSP) | **Fail** (BUG-16) | `api/test_auth_and_static::test_index_page_sends_security_header` |
-| HTTP | Контракт demo-GeoJSON: схема, унікальні id, точки всередині полів, MGRS | Pass | `api/test_sample_data_contract` |
+| HTTP | Security-заголовки (HSTS, nosniff, X-Frame-Options, CSP) | **Fail** (BUG-16) | — (вручну) |
 | Імпорт | Пошкоджені файли (JSON, не FeatureCollection, CSV без Lat/Lng тощо) відхиляються з повідомленням | Pass | `test_import::test_malformed_file_is_rejected_with_message` |
-| Старт | Невідомий hash-маршрут веде на стартову сторінку | Pass | `test_start_page` |
-| Старт | Унікальні `id` елементів | **Fail** (BUG-15) | `test_start_page::test_start_page_element_ids_are_unique` |

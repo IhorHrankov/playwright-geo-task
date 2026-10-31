@@ -1,4 +1,4 @@
-"""Runtime configuration read from environment variables (and an optional .env file)."""
+"""Конфігурація запуску зі змінних оточення (і необов'язкового файлу .env)."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 
 class MissingCredentialsError(RuntimeError):
-    """Raised when a test needs the Basic Auth credentials but they are not configured."""
+    """Виникає, коли тесту потрібні облікові дані Basic Auth, а їх не задано."""
 
 
 @dataclass(frozen=True)
@@ -42,6 +42,6 @@ class Settings:
     def require_credentials(self) -> Credentials:
         if self.credentials is None:
             raise MissingCredentialsError(
-                "APP_USERNAME / APP_PASSWORD are not set. Copy .env.example to .env and fill them in."
+                "APP_USERNAME / APP_PASSWORD не задано. Скопіюйте .env.example у .env і заповніть їх."
             )
         return self.credentials

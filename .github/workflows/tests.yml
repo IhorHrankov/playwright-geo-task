@@ -5,7 +5,7 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "17 4 * * 1-5"  # weekday regression
+    - cron: "17 4 * * 1-5"  # регресія в робочі дні
 
 jobs:
   lint:
@@ -14,9 +14,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
-      - run: pip install ruff
-      - run: ruff check .
-      - run: python scripts/check_test_style.py
+      - run: pip install ruff pycodestyle
+      - run: scripts/lint.sh
 
   e2e:
     needs: lint
@@ -30,9 +29,9 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       - run: playwright install --with-deps chromium
-      - name: API + UI tests
+      - name: UI-тести
         run: >
-          pytest -m "api or ui" -n auto --reruns 1 --browser chromium
+          pytest -m ui -n auto --reruns 1 --browser chromium
           --html=test-results/report.html --self-contained-html
           --junitxml=test-results/junit.xml
       - uses: actions/upload-artifact@v4

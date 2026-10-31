@@ -1,4 +1,4 @@
-"""Main application page (#/test): sidebar with fields and points, map, header data menu."""
+"""Головна сторінка застосунку (#/test): бічна панель із полями й точками, карта, меню даних."""
 
 from __future__ import annotations
 
@@ -33,13 +33,13 @@ class FieldsGisPage(BasePage):
         super().wait_until_ready()
         self.map.wait_until_idle()
 
-    # --- workflows used by several specs ---
+    # --- сценарії, спільні для кількох тестів ---
     def select_field(self, field: Field) -> None:
         self.fields.card(field).select()
         self.map.wait_until_idle()
 
     def open_add_point_modal(self, field: Field) -> None:
-        """Make ``field`` active and click in its centre."""
+        """Робить ``field`` активним і клікає в його центр."""
         if self.fields.card(field).root.get_attribute("aria-pressed") != "true":
             self.select_field(field)
         self.map.click_inside(field)

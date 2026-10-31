@@ -8,7 +8,7 @@ from framework.components.base_component import BaseComponent
 
 
 class DataMenu(BaseComponent):
-    """Header "Дані" dropdown: export GeoJSON/CSV, import file, load demo sample."""
+    """Випадне меню «Дані» в шапці: експорт GeoJSON/CSV, імпорт файлу, завантаження демо-зразка."""
 
     def __init__(self, page: Page) -> None:
         super().__init__(page.locator("header").filter(has=page.get_by_role("button", name="Дані")))
@@ -62,7 +62,7 @@ class DataMenu(BaseComponent):
         return self._download(self.export_csv_item, target_dir)
 
     def import_file(self, path: Path) -> None:
-        """Upload through the menu item, the same way a user does (file chooser)."""
+        """Завантаження через пункт меню, як це робить користувач (file chooser)."""
         self.open()
         with self.page.expect_file_chooser() as info:
             self.import_item.click()

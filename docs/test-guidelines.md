@@ -1,7 +1,7 @@
 # Правила написання автотестів
 
 Мета — тест читається як специфікація: відкрили файл, і за хвилину зрозуміло, **що** перевіряється
-та **чому** впало. Правила зведені з джерел у кінці документа й закріплені в коді та CI.
+та **чому** впало. Правила закріплені в коді та CI.
 
 ## 1. Жодної логіки в тестах
 
@@ -16,11 +16,12 @@
 
 ## 2. Очікувані значення записані наперед
 
-Тест порівнює з літералом або з ревʼюваним еталонним файлом, а не з тим, що обчислив сам:
+Тест порівнює із записаним наперед значенням (текст із `ui_texts.json`, літерал) або з ревʼюваним
+еталонним файлом, а не з тим, що обчислив сам:
 
 ```python
-expect(gis_page.points.heading).to_have_text("Моніторингові точки (6)")       # не f"({before + 1})"
-assert read_json(exported) == read_json(EXPECTED_STANDARD_GEOJSON)            # test_data/expected/
+expect(gis_page.points.heading).to_have_text(UI.fields_gis.points.heading(count=6))  # не count=before + 1
+assert read_json(exported) == read_json(EXPECTED_STANDARD_GEOJSON)  # test_data/expected/
 ```
 
 Тестові дані (`framework/data/test_data.py`) — це літерали з іменами, що пояснюють суть:
@@ -31,17 +32,18 @@ assert read_json(exported) == read_json(EXPECTED_STANDARD_GEOJSON)            # 
 
 Тест має бути зрозумілим без стрибків по файлах (Descriptive And Meaningful Phrases). Невелике
 повторення в тестах допустиме. Спільним робимо тільки те, що не важливо для розуміння тесту:
-навігацію, локатори, підготовку стану. Важливе для сценарію (дані, очікуваний результат)
-лишається в самому тесті.
+навігацію, локатори, підготовку стану. Важливе для сценарію лишається видимим у тесті: тексти
+винесено в `ui_texts.json`, але ключ описує їх зміст, а значення (наприклад, кількість точок)
+передається прямо в тесті.
 
 ## 4. Структура Arrange / Act / Assert і одна поведінка на тест
 
 ```python
-def test_deleting_point_removes_it_from_storage(gis_page):            # Arrange — фікстура
-    gis_page.points.card(SOIL_SAMPLE_FIELD_1.description).delete()      # Act
-    expect(gis_page.points.heading).to_have_text("Моніторингові точки (4)")
+def test_deleting_point_removes_it_from_storage(gis_page):  # Arrange — фікстура
+    gis_page.points.card(SOIL_SAMPLE_FIELD_1.description).delete()  # Act
+    expect(gis_page.points.heading).to_have_text(UI.fields_gis.points.heading(count=4))
 
-    assert StoredPoints(gis_page.page).ids() == ["std-2", "std-3", "std-4", "std-5"]   # Assert
+    assert StoredPoints(gis_page.page).ids() == ["std-2", "std-3", "std-4", "std-5"]  # Assert
 ```
 
 Блоки розділені порожнім рядком. Якщо тесту потрібен `if`, щоб перевірити два результати, —
@@ -59,17 +61,22 @@ def test_deleting_point_removes_it_from_storage(gis_page):            # Arrange 
 | `tests/` | сценарій і перевірки | локатори, логіку, «магічні» числа |
 | `framework/pages`, `components` | локатори (властивості), дії-дієслова, доменні запити (`is_a_marker_centered()`) | `assert`, `expect` |
 | `framework/storage.py` | доменні перевірки стану (`outside_their_field()` → список id) | залежність від UI |
-| `framework/data` | літеральні дані, тексти UI (`messages.py`), еталонні файли | обчислення очікуваних результатів |
+| `framework/data` | літеральні дані, тексти (`ui_texts.json`), еталонні файли | обчислення очікуваних результатів |
 
-Зміна верстки виправляється в одному компоненті, зміна тексту — у `messages.py`, зміна даних —
+Зміна верстки виправляється в одному компоненті, зміна тексту — у `ui_texts.json`, зміна даних —
 у `test_data.py`; тести не змінюються.
 
 ## 7. Перевірки Playwright, які чекають самі (web-first)
 
 Для UI — тільки `expect(locator)...`; вони повторюються до таймауту. Не використовувати
 `assert locator.is_visible()` чи `inner_text()` у тесті. Звичайний `assert` — лише для даних
-поза DOM (завантажений файл, localStorage, HTTP-відповідь), і тільки після web-first перевірки,
+поза DOM (завантажений файл, localStorage), і тільки після web-first перевірки,
 яка дочекалася завершення дії.
+
+Перевірка «нічого не змінилося» має дочекатися сигналу завершення: імпорт і демо-зразок асинхронні,
+тому без нього `expect` пройде ще до дії. Закрийте попередній toast, виконайте дію, дочекайтеся
+нового toast і лише тоді перевіряйте лічильник. Сторонні сервіси (тайли) повільні під навантаженням,
+тому для них задайте явний таймаут (`TILE_LOAD_MS`).
 
 ## 8. Локатори, орієнтовані на користувача
 
@@ -85,16 +92,28 @@ def test_deleting_point_removes_it_from_storage(gis_page):            # Arrange 
 
 Тест перевіряє правильну поведінку й позначений `@known_bug("BUG-xx")` (strict xfail).
 Реєстр — `tests/known_bugs.py`. Виправлений баг перетворює XFAIL на падіння, і маркер прибирають.
+`xfail` приховує будь-яке падіння, тому причину кожного нового маркера перевіряють через `--runxfail`.
 
-## Джерела
+## 11. Тексти в одному файлі
 
-* Google Testing Blog — [Don't Put Logic in Tests](https://testing.googleblog.com/2014/07/testing-on-toilet-dont-put-logic-in.html);
-  *Software Engineering at Google*, розд. 12 (DAMP, not DRY; test behaviors; clear failure messages).
-* Playwright — [Best Practices](https://playwright.dev/docs/best-practices): user-visible behavior,
-  test isolation, user-facing locators, web-first assertions.
-* Microsoft — [Unit testing best practices](https://learn.microsoft.com/dotnet/core/testing/unit-testing-best-practices):
-  Arrange/Act/Assert, avoid logic in tests, avoid magic strings.
-* Sourcery — [no-loop-in-tests](https://docs.sourcery.ai/Coding-Assistant/Reference/Rules-and-In-Line-Suggestions/Python/Default-Rules/no-loop-in-tests/):
-  parametrize instead of loops, move complex logic into helpers and fixtures.
-* [anton.qa — Page Object Model in Playwright](https://www.anton.qa/blog/posts/page-object-model-in-playwright-with-typescript-complete-guide#best-practices):
-  base page, components, fixtures, assertions in tests.
+Тексти інтерфейсу та текстові вхідні дані тестів лежать у `framework/data/ui_texts.json` і згруповані
+так: сторінка → компонент → ключ. Тест звертається до них за шляхом:
+
+```python
+expect(gis_page.points.heading).to_have_text(UI.fields_gis.points.heading(count=6))  # шаблон
+expect(gis_page.toast.root).to_have_text(UI.fields_gis.points.point_deleted)  # текст
+```
+
+* `{count}` — плейсхолдер: значення передають під час виклику.
+* `{@fields_gis.fields.field_1.name}` — посилання на інший текст того самого файлу, тож назва поля
+  записана один раз. Посилання розгортаються під час завантаження файлу.
+* Неіснуючий ключ дає `AttributeError` зі шляхом до ключа.
+* Технічні значення лишаються в тесті: id (`std-1`), MGRS, enum, атрибути, `ids` параметризації.
+  Описи точок беруться з констант `test_data.py` (`PESTS_FIELD_1.description`).
+* Локатори компонентів у `framework/components` поки що містять власні підписи кнопок.
+
+## 12. Статичні перевірки
+
+`scripts/lint.sh` запускає те саме, що й CI: `ruff check` (лінтер і pep8-naming), `ruff format --check`,
+`pycodestyle` (PEP 8) і `check_test_style.py`. Максимальна довжина рядка — 110 символів.
+Автовиправлення: `ruff check --fix . && ruff format .`.

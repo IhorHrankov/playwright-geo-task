@@ -1,0 +1,84 @@
+{
+  "fields_gis": {
+    "fields": {
+      "heading": "Сільгосп поля ({count})",
+      "field_1": {
+        "name": "Поле №1 - Озима пшениця",
+        "crop": "Озима пшениця",
+        "area": "68.4 га",
+        "area_by_geometry": "176.1 га",
+        "tooltip_details": "{@fields_gis.fields.field_1.area} • {@fields_gis.fields.field_1.crop}"
+      },
+      "field_2": {
+        "name": "Поле №2 - Соняшник класичний",
+        "crop": "Соняшник",
+        "area": "52.1 га",
+        "area_by_geometry": "149.2 га"
+      },
+      "field_3": {
+        "name": "Поле №3 - Кукурудза на зерно",
+        "crop": "Кукурудза",
+        "area": "84.7 га",
+        "area_by_geometry": "192.6 га"
+      },
+      "field_4": {
+        "name": "Поле №4 - Ріпак озимий",
+        "crop": "Ріпак",
+        "area": "41.3 га",
+        "area_by_geometry": "143.7 га"
+      }
+    },
+    "point_types": {
+      "soil_sample": "Проба ґрунту",
+      "pests": "Шкідники",
+      "plant_disease": "Хвороби рослин",
+      "other": "Інше"
+    },
+    "add_point": {
+      "description_too_long": "Опис не повинен перевищувати 250 символів",
+      "point_outside_field_1": "Точка повинна бути в межах обраного поля \"{@fields_gis.fields.field_1.name}\".",
+      "inputs": {
+        "pests_description": "QA: новий осередок шкідників",
+        "stored_description": "QA: збереження",
+        "reloaded_description": "QA: перевірка збереження"
+      }
+    },
+    "points": {
+      "heading": "Моніторингові точки ({count})",
+      "sort_newest": "Нові",
+      "sort_oldest": "Старі",
+      "field_1_caption": "• {@fields_gis.fields.field_1.name}",
+      "no_points_found": "Точок за вашим запитом не знайдено",
+      "point_deleted": "Точку моніторингу видалено",
+      "data_reset": "Дані успішно скинуто до початкових демо-точок",
+      "delete_button": "Видалити моніторингову точку",
+      "undo_button": "Скасувати",
+      "search": {
+        "by_description": "черепашки",
+        "by_description_uppercase": "ЧЕРЕПАШКИ",
+        "with_surrounding_spaces": "  гнилі  ",
+        "by_field_crop": "{@fields_gis.fields.field_2.crop}",
+        "by_type_lowercase": "шкідники",
+        "combined_with_filter": "{@fields_gis.fields.field_4.crop}",
+        "without_matches": "такого опису немає"
+      }
+    },
+    "data_menu": {
+      "export_caption": "Експорт даних ({count})",
+      "exported_5_to_geojson": "Експортовано 5 точок у GeoJSON",
+      "csv_escaped_description": "\"Опис з \"\"лапками\"\"; крапкою з комою\"",
+      "demo_loaded": "Завантажено 6 точок з еталонного мок-файлу!",
+      "import_success_start": "Успішно імпортовано {count} точ",
+      "import_success_one_point": "Успішно імпортовано 1 точку з файлу \"{file}\"!",
+      "duplicate_point_description": "QA dup B",
+      "import_errors": {
+        "invalid_json": "Помилка синтаксису JSON під час парсингу файлу.",
+        "not_feature_collection": "Некоректний формат GeoJSON: очікується FeatureCollection з масивом features.",
+        "no_point_features": "У GeoJSON файлі не знайдено валідних точок моніторингу.",
+        "csv_header_only": "CSV файл повинен містити рядок заголовків та щонайменше один рядок даних.",
+        "csv_no_lat_lng": "У CSV не знайдено обов’язкових колонок широти (Lat) та довготи (Lng).",
+        "csv_no_valid_rows": "У CSV файлі не знайдено валідних рядків з координатами."
+      }
+    }
+  }
+}

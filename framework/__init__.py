@@ -1,1 +1,1 @@
-"""Test framework for AgTech Fields GIS: config, test data, page objects, API client, helpers."""
+"""Тестовий фреймворк для AgTech Fields GIS: конфігурація, тестові дані, page objects, хелпери."""

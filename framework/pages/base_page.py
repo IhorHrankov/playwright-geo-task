@@ -1,4 +1,4 @@
-"""Base class for page objects: shared page handle, navigation, readiness contract."""
+"""Базовий клас page objects: спільний page, навігація, контракт готовності."""
 
 from __future__ import annotations
 
@@ -15,20 +15,21 @@ class BasePage(ABC):
     @property
     @abstractmethod
     def path(self) -> str:
-        """Path relative to base_url (the app uses hash routing)."""
+        """Шлях відносно base_url (застосунок використовує hash-маршрутизацію)."""
 
     @property
     @abstractmethod
     def ready_marker(self) -> Locator:
-        """An element that is visible only when the page is usable."""
+        """Елемент, видимий лише тоді, коли сторінкою можна користуватися."""
 
     def open(self) -> Self:
-        self.page.goto(self.path)
+        # Готовність визначає ready_marker; подія load залежить від повільних сторонніх ресурсів.
+        self.page.goto(self.path, wait_until="domcontentloaded")
         self.wait_until_ready()
         return self
 
     def reload(self) -> Self:
-        self.page.reload()
+        self.page.reload(wait_until="domcontentloaded")
         self.wait_until_ready()
         return self
 

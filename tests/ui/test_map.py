@@ -1,14 +1,17 @@
-"""Map: polygons, markers, basemaps, focus control, popup."""
+"""Карта: полігони, маркери, підкладки, кнопка фокуса, попап."""
 
 import pytest
 from playwright.sync_api import expect
 
 from framework.data.fields import FIELD_1
 from framework.data.test_data import DISEASE_WITH_DETAILS
+from framework.data.ui_texts import UI
 from framework.pages import FieldsGisPage
 from tests.known_bugs import known_bug
 
 pytestmark = [pytest.mark.ui, pytest.mark.regression]
+
+TILE_LOAD_MS = 20_000  # тайли віддають сторонні сервіси, під навантаженням вони повільні
 
 
 @pytest.mark.smoke
@@ -19,14 +22,14 @@ def test_map_shows_four_fields_and_five_markers(gis_page: FieldsGisPage) -> None
 
 
 def test_streets_basemap_is_loaded_by_default(gis_page: FieldsGisPage) -> None:
-    expect(gis_page.map.tiles_from("basemaps.cartocdn.com").first).to_be_visible()
+    expect(gis_page.map.tiles_from("basemaps.cartocdn.com").first).to_be_visible(timeout=TILE_LOAD_MS)
     expect(gis_page.map.tiles_from("arcgisonline.com")).to_have_count(0)
 
 
 def test_satellite_basemap_loads_satellite_tiles(gis_page: FieldsGisPage) -> None:
     gis_page.map.select_basemap("satellite")
 
-    expect(gis_page.map.tiles_from("arcgisonline.com").first).to_be_visible()
+    expect(gis_page.map.tiles_from("arcgisonline.com").first).to_be_visible(timeout=TILE_LOAD_MS)
 
 
 def test_switching_back_to_streets_loads_street_tiles(gis_page: FieldsGisPage) -> None:
@@ -34,7 +37,7 @@ def test_switching_back_to_streets_loads_street_tiles(gis_page: FieldsGisPage) -
 
     gis_page.map.select_basemap("streets")
 
-    expect(gis_page.map.tiles_from("basemaps.cartocdn.com").first).to_be_visible()
+    expect(gis_page.map.tiles_from("basemaps.cartocdn.com").first).to_be_visible(timeout=TILE_LOAD_MS)
 
 
 def test_focus_button_returns_map_to_active_field(gis_page: FieldsGisPage) -> None:
@@ -51,9 +54,9 @@ def test_marker_popup_shows_point_details(open_gis_with) -> None:
 
     gis.map.markers.first.click()
 
-    expect(gis.map.popup).to_contain_text("Хвороби рослин")
-    expect(gis.map.popup).to_contain_text("Поле №1 - Озима пшениця")
-    expect(gis.map.popup).to_contain_text("Фузаріоз колосу")
+    expect(gis.map.popup).to_contain_text(UI.fields_gis.point_types.plant_disease)
+    expect(gis.map.popup).to_contain_text(UI.fields_gis.fields.field_1.name)
+    expect(gis.map.popup).to_contain_text(DISEASE_WITH_DETAILS.description)
     expect(gis.map.popup).to_contain_text("36U UA 21639 87558")
 
 

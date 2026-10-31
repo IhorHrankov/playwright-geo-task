@@ -9,7 +9,7 @@ from framework.data.models import PointType
 
 
 class PointCard(BaseComponent):
-    """A monitoring point in the sidebar list."""
+    """Моніторингова точка у списку на бічній панелі."""
 
     @property
     def type_badge(self) -> Locator:
@@ -39,15 +39,15 @@ class PointCard(BaseComponent):
 
 
 class PointsPanel(BaseComponent):
-    """Points section: counter heading, search, sort, type filter, list, reset."""
+    """Секція точок: заголовок-лічильник, пошук, сортування, фільтр за типом, список, скидання."""
 
     def __init__(self, page: Page) -> None:
         super().__init__(page.locator("section[aria-labelledby='points-heading']"))
 
-    # --- locators used in assertions ---
+    # --- локатори для перевірок ---
     @property
     def heading(self) -> Locator:
-        """Text: 'Моніторингові точки (N)'."""
+        """Текст: «Моніторингові точки (N)»."""
         return self.root.locator("#points-heading")
 
     @property
@@ -91,7 +91,7 @@ class PointsPanel(BaseComponent):
     def _type_toolbar(self) -> Locator:
         return self.root.get_by_role("toolbar", name="Фільтрація точок за категоріями замірів")
 
-    # --- cards ---
+    # --- картки ---
     @property
     def first_card(self) -> PointCard:
         return PointCard(self.cards.first)
@@ -99,7 +99,7 @@ class PointsPanel(BaseComponent):
     def card(self, description: str) -> PointCard:
         return PointCard(self.cards.filter(has=self.page.locator("p", has_text=description)).first)
 
-    # --- actions ---
+    # --- дії ---
     def search(self, text: str) -> None:
         self.search_input.fill(text)
 
@@ -110,7 +110,7 @@ class PointsPanel(BaseComponent):
         self.sort_button.click()
 
     def reset_data(self) -> None:
-        """Click 'Скинути дані' and confirm the native dialog."""
+        """Натискає «Скинути дані» і підтверджує нативний діалог."""
         self.page.once("dialog", lambda dialog: dialog.accept())
         self.root.get_by_role("button", name="Скинути дані").click()
 

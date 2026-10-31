@@ -1,7 +1,7 @@
 [project]
 name = "agtech-fields-qa"
 version = "1.0.0"
-description = "QA artefacts and automated tests (Python + Playwright) for AgTech Fields GIS"
+description = "QA-артефакти й автотести (Python + Playwright) для AgTech Fields GIS"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.6", "mypy>=1.11"]
+dev = ["ruff>=0.6", "pycodestyle>=2.11", "mypy>=1.11"]
 
 [tool.setuptools.packages.find]
 include = ["framework*"]
@@ -36,10 +36,9 @@ addopts = [
     "--output=test-results/artifacts",
 ]
 markers = [
-    "smoke: critical-path checks, run on every build",
-    "regression: full functional regression",
-    "ui: end-to-end browser tests",
-    "api: HTTP-level checks without a browser",
+    "smoke: перевірки критичного шляху, запускаються на кожній збірці",
+    "regression: повна функціональна регресія",
+    "ui: наскрізні тести в браузері",
 ]
 
 [tool.ruff]
@@ -47,8 +46,8 @@ line-length = 110
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM", "PT", "RUF"]
-ignore = ["RUF001", "RUF002", "RUF003"]  # Ukrainian strings contain Cyrillic look-alike letters
+select = ["E", "F", "W", "N", "I", "B", "C4", "UP", "SIM", "PT", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # українські рядки містять кириличні літери, схожі на латинські
 
 [tool.mypy]
 python_version = "3.11"

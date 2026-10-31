@@ -1,4 +1,4 @@
-"""Export to GeoJSON and CSV. Downloads are compared with reviewed files in test_data/expected/."""
+"""Експорт у GeoJSON і CSV. Завантаження порівнюються з еталонами в test_data/expected/."""
 
 import re
 from pathlib import Path
@@ -6,13 +6,13 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import expect
 
-from framework.data import messages
 from framework.data.test_data import (
     EXPECTED_STANDARD_CSV,
     EXPECTED_STANDARD_GEOJSON,
     POINT_WITH_FORMULA,
     POINT_WITH_QUOTES,
 )
+from framework.data.ui_texts import UI
 from framework.files import read_json, read_text
 from framework.pages import FieldsGisPage
 from tests.known_bugs import known_bug
@@ -47,7 +47,7 @@ def test_export_file_names_contain_date(gis_page: FieldsGisPage, tmp_path: Path)
 def test_export_shows_confirmation(gis_page: FieldsGisPage, tmp_path: Path) -> None:
     gis_page.data_menu.export_geojson(tmp_path)
 
-    expect(gis_page.toast.root).to_have_text(messages.EXPORTED_5_TO_GEOJSON)
+    expect(gis_page.toast.root).to_have_text(UI.fields_gis.data_menu.exported_5_to_geojson)
 
 
 def test_csv_export_escapes_quotes_and_semicolons(open_gis_with, tmp_path: Path) -> None:
@@ -55,13 +55,15 @@ def test_csv_export_escapes_quotes_and_semicolons(open_gis_with, tmp_path: Path)
 
     exported = gis.data_menu.export_csv(tmp_path)
 
-    assert '"Опис з ""лапками""; крапкою з комою"' in read_text(exported)
+    assert UI.fields_gis.data_menu.csv_escaped_description in read_text(exported)
 
 
 def test_export_is_disabled_without_points(empty_gis_page: FieldsGisPage) -> None:
     empty_gis_page.data_menu.open()
 
-    expect(empty_gis_page.data_menu.export_caption).to_have_text("Експорт даних (0)")
+    expect(empty_gis_page.data_menu.export_caption).to_have_text(
+        UI.fields_gis.data_menu.export_caption(count=0)
+    )
     expect(empty_gis_page.data_menu.export_geojson_item).to_be_disabled()
     expect(empty_gis_page.data_menu.export_csv_item).to_be_disabled()
 
@@ -79,7 +81,7 @@ def test_csv_export_neutralises_spreadsheet_formulas(open_gis_with, tmp_path: Pa
 def test_export_contains_all_points_even_when_list_is_filtered(
     gis_page: FieldsGisPage, tmp_path: Path
 ) -> None:
-    gis_page.points.search("черепашки")
+    gis_page.points.search(UI.fields_gis.points.search.by_description)
 
     exported = gis_page.data_menu.export_geojson(tmp_path)
 

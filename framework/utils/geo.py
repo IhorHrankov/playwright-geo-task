@@ -1,8 +1,8 @@
-"""Independent geodesy helpers used as a test oracle (no dependency on the app's own code).
+"""Незалежні геодезичні хелпери — тестовий оракул (не залежать від коду застосунку).
 
-* ``to_mgrs`` — WGS84 lat/lng -> MGRS (5-digit, 1 m precision) via UTM (Snyder series).
-* ``point_in_polygon`` — ray casting on lng/lat.
-* ``polygon_area_ha`` — planar area on a local equirectangular projection (accurate for small fields).
+* ``to_mgrs`` — WGS84 lat/lng -> MGRS (5 цифр, точність 1 м) через UTM (ряди Снайдера).
+* ``point_in_polygon`` — ray casting за lng/lat.
+* ``polygon_area_ha`` — площа на локальній рівнопроміжній проєкції (точна для невеликих полів).
 """
 
 from __future__ import annotations
@@ -26,9 +26,9 @@ def is_valid_lat_lng(lat: float, lng: float) -> bool:
 
 
 def to_utm(lat: float, lng: float) -> tuple[int, float, float]:
-    """Return (zone, easting, northing). Norway/Svalbard zone exceptions are out of scope."""
+    """Повертає (zone, easting, northing). Винятки зон Норвегії/Шпіцбергена не враховано."""
     if not is_valid_lat_lng(lat, lng) or not -80 <= lat <= 84:
-        raise ValueError(f"coordinates outside the UTM/MGRS domain: {lat}, {lng}")
+        raise ValueError(f"координати поза областю UTM/MGRS: {lat}, {lng}")
     zone = int((lng + 180) / 6) + 1
     lon0 = math.radians((zone - 1) * 6 - 180 + 3)
     phi, lam = math.radians(lat), math.radians(lng)
@@ -59,7 +59,7 @@ def to_utm(lat: float, lng: float) -> tuple[int, float, float]:
 
 
 def to_mgrs(lat: float, lng: float) -> str:
-    """Format exactly like the app: ``36U UA 22034 87773``."""
+    """Формат такий самий, як у застосунку: ``36U UA 22034 87773``."""
     zone, easting, northing = to_utm(lat, lng)
     band = _BANDS[int((lat + 80) // 8)]
     col = _COL_SETS[(zone - 1) % 3][int(easting // 100_000) - 1]
@@ -69,10 +69,10 @@ def to_mgrs(lat: float, lng: float) -> str:
 
 
 def mgrs_close(actual: str, expected: str, tolerance_m: int = 2) -> bool:
-    """Same grid zone and 100 km square, easting/northing within ``tolerance_m`` metres.
+    """Та сама зона сітки й квадрат 100 км, easting/northing у межах ``tolerance_m`` метрів.
 
-    Used where the UI shows coordinates rounded to 5 decimals while MGRS is computed
-    from the unrounded click position (a difference of up to ~1 m is expected).
+    Для випадків, коли UI показує координати, округлені до 5 знаків, а MGRS обчислено
+    з неокругленої позиції кліку (очікувана різниця — до ~1 м).
     """
     try:
         gz_a, sq_a, e_a, n_a = actual.split()
@@ -87,7 +87,7 @@ def mgrs_close(actual: str, expected: str, tolerance_m: int = 2) -> bool:
 
 
 def point_in_polygon(lat: float, lng: float, ring: Sequence[tuple[float, float]]) -> bool:
-    """Ray casting. ``ring`` is a sequence of (lng, lat) vertices, closed or open."""
+    """Ray casting. ``ring`` — послідовність вершин (lng, lat), замкнена чи відкрита."""
     inside = False
     j = len(ring) - 1
     for i in range(len(ring)):
@@ -100,7 +100,7 @@ def point_in_polygon(lat: float, lng: float, ring: Sequence[tuple[float, float]]
 
 
 def polygon_area_ha(ring: Sequence[tuple[float, float]]) -> float:
-    """Shoelace area of a small (lng, lat) polygon, in hectares."""
+    """Площа невеликого полігона (lng, lat) за формулою шнурка, у гектарах."""
     lat0 = math.radians(sum(p[1] for p in ring) / len(ring))
     pts = [(math.radians(x) * _A * math.cos(lat0), math.radians(y) * _A) for x, y in ring]
     area = 0.0

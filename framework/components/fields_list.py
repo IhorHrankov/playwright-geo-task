@@ -9,7 +9,7 @@ from framework.data.fields import Field
 
 
 class FieldCard(BaseComponent):
-    """One field in the sidebar (article role="button"; aria-pressed="true" when active)."""
+    """Одне поле на бічній панелі (article role="button"; aria-pressed="true", коли активне)."""
 
     @property
     def title(self) -> Locator:

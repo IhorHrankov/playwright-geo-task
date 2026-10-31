@@ -1,0 +1,5 @@
+[pycodestyle]
+max-line-length = 110
+exclude = .venv,.git,__pycache__,.ruff_cache,.pytest_cache,test-results
+# E203, W503: форматування ruff format, сумісне з PEP 8, але не з цими застарілими перевірками
+ignore = E203,W503

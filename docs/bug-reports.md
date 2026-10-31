@@ -3,7 +3,8 @@
 **Середовище:** https://main.d8gkeeaiko6qy.amplifyapp.com/#/test · бандл `assets/index-CQH8NmrV.js` ·
 Google Chrome (desktop), 1352×722 · 31.10.2026. Тестові дані: [test-data.md](test-data.md).
 
-Кожен дефект відтворюється автотестом у статусі strict `xfail` (див. `tests/known_bugs.py`).
+Кожен дефект, крім BUG-16, відтворюється автотестом у статусі strict `xfail` (див. `tests/known_bugs.py`).
+BUG-16 перевірено вручну, автотесту немає.
 
 | ID | Назва | Severity | Priority | Автотест |
 | --- | --- | --- | --- | --- |
@@ -11,18 +12,17 @@ Google Chrome (desktop), 1352×722 · 31.10.2026. Тестові дані: [test
 | [BUG-01](#bug-01) | Імпорт приймає точки поза межами полів і прив'язує їх до поля | Major | High | `test_import::test_point_outside_its_field_is_not_imported` |
 | [BUG-02](#bug-02) | Імпорт приймає недопустимі координати (lat 95, lng 200) | Major | High | `test_import::test_out_of_range_coordinates_are_not_imported` |
 | [BUG-06](#bug-06) | Повторний імпорт і «Демо-зразок» дублюють точки | Major | High | `test_import::test_reimporting_exported_file_does_not_duplicate_points`, `test_loading_demo_twice_does_not_duplicate_points` |
-| [BUG-07](#bug-07) | Підкладка «Схема» показує тайли «API KEY REQUIRED» | Major | High | `test_map::test_streets_basemap_does_not_show_api_key_placeholder`, `api/test_basemap_tiles` |
+| [BUG-07](#bug-07) | Підкладка «Схема» показує тайли «API KEY REQUIRED» | Major | High | `test_map::test_streets_basemap_does_not_show_api_key_placeholder` |
 | [BUG-08](#bug-08) | Площа полів не відповідає геометрії (у 2,5–3,5 раза) | Major | Medium | `test_fields::test_field_area_matches_polygon_geometry` |
 | [BUG-04](#bug-04) | Імпорт не валідує дату; сортування ламається | Minor | Medium | `test_import::test_invalid_creation_date_is_not_imported` |
 | [BUG-05](#bug-05) | Імпортований MGRS не перевіряється | Minor | Medium | `test_import::test_imported_mgrs_is_recalculated_from_coordinates` |
 | [BUG-09](#bug-09) | CSV-експорт вразливий до formula injection | Minor | Medium | `test_export::test_csv_export_neutralises_spreadsheet_formulas` |
 | [BUG-10](#bug-10) | Повторний «Показати на карті» для тієї ж точки не центрує карту | Minor | Medium | `test_points_list::test_show_on_map_again_after_panning_recentres_map` |
 | [BUG-11](#bug-11) | Фільтр і пошук не застосовуються до маркерів на карті | Minor | Medium | `test_points_list::test_type_filter_is_applied_to_map_markers` |
-| [BUG-16](#bug-16) | Відсутні security-заголовки HTTP | Minor | Medium | `api/test_auth_and_static::test_index_page_sends_security_header` |
+| [BUG-16](#bug-16) | Відсутні security-заголовки HTTP | Minor | Medium | — (вручну) |
 | [BUG-12](#bug-12) | Експорт неявно враховує активні фільтри | Minor | Low | `test_export::test_export_contains_all_points_even_when_list_is_filtered` |
 | [BUG-14](#bug-14) | Видалення точки без підтвердження і Undo | Trivial | Low | `test_points_list::test_deleting_point_offers_undo` |
 | [BUG-13](#bug-13) | Неправильне узгодження числа в toast («1 точок») | Trivial | Low | `test_import::test_import_toast_uses_singular_for_one_point` |
-| [BUG-15](#bug-15) | Дубльований `id="task-result"` на стартовій сторінці | Trivial | Low | `test_start_page::test_start_page_element_ids_are_unique` |
 
 ---
 
@@ -232,15 +232,3 @@ Google Chrome (desktop), 1352×722 · 31.10.2026. Тестові дані: [test
 **Очікуваний результат:** «Успішно імпортовано 1 точку» (2–4 — «точки», 5+ — «точок»).
 
 **Фактичний результат:** «Успішно імпортовано 1 точок з файлу…». Та сама проблема в «Експортовано N точок» і «Завантажено N точок».
-
-## BUG-15
-
-**Дубльований `id="task-result"` на стартовій сторінці**
-
-* **Severity:** Trivial · **Priority:** Low · **Компонент:** Стартова сторінка (`#/`), доступність
-
-**Кроки:** відкрити головну сторінку; перевірити заголовки секцій «Результат» і «Використання LLM інструментів».
-
-**Очікуваний результат:** унікальні `id`; секція LLM посилається на власний заголовок.
-
-**Фактичний результат:** обидва `h2` мають `id="task-result"`. Секція з `aria-labelledby="llm-usage"` посилається на неіснуючий `id`, тож скрінрідер не озвучить її назву.
